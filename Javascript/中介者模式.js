@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>中介者模式</title>
+</head>
+<body>
+<script>    
+function extend(subclass, superclass) {
+    var F = function () {
+    };
+    F.prototype = superclass.prototype;
+    subclass.prototype = new F();
+    subclass.prototype.constructor = subclass;
+    subclass.super = superclass.prototype;
+
+    if (superclass.prototype.constructor === Object.prototype.constructor) {
+        superclass.prototype.constructor = superclass;
+    }
+}
+
+function override(targetObj, obj, deep) {
+    if (Object.prototype.toString.call(obj) !== '[object Object]') {
+        return;
+    }
+    for (var i in obj) {
+        if (obj.hasOwnProperty(i)) {
+            if (deep === true) {
+                targetObj[i] = targetObj[i] || {};
+                rewrite(targetObj[i], obj[i], deep);
+            } else {
+                targetObj[i] = obj[i];
+            }
+        }
+    }
+}
+</script>
+<script>
+/**
+ * 中介者模式
+ *
+ * 定义：
+ * 用一个中介对象来封装一系列的对象交互。中介者使得各对象不需要显式地相互引用，从而使其耦合松散，而且可以独立地改变它们之间的交互。
+ *
+ * 本质：封装交互
+ *
+ * 中介者模式的解决私立很简单，它通过引入一个中介对象，让其他的对象都只和中介对象交互，而中介对象知道如何和其他所有的对象交互，这样对象之间的交互关系就没有了，从而实现了对象之间的解耦。
+ * 对于中介对象而言，所有的相互交互的对象，被视为同事类，中介者对象就是来维护各个同事之间的关系，而所有的同事类都只是和中介对象交互。
+ * 每个同事对象，当自己发生变化的时候，不需要知道这会引起其他对象有什么变化，它只需要通知中介者就可以了，然后由中介者去与其他对象交互。这样松散耦合带来的好处是，除了让同事对象之间相互没有关联外，还有利于功能的修改和扩展。
+ * 有了中介者之后，所有的交互都封装到中介者对象里面，各个对象就不再需要维护这些关系了。扩展关系的时候也只需要扩展或修改中介者对象就可以了。
+ * 
+ *
+ * 同事关系
+ * 在标准的中介者模式中，将使用中介者对象来交互的那些对象称为同事类，在中介者模式中，要求这些类都要继承相同的类。也就是说，这些对象从某个角度讲是同一个类型，算是兄弟对象。
+ * 正是这些兄弟对象之间的交互关系很复杂，才产生了把这些交互关系分离出来，单独做成中介者对象。
+ *
+ * 同事和中介者的关系
+ * 在中介者模式中，当一个同事对象发生了改变，需要主动通知中介者，让中介者去处理与其他同事对象相关的交互。
+ * 这就导致了同事对象和中介者对象之间必须有关系，首先是同事对象需要知道中介者对象是谁；反过来，中介者对象也需要知道相关的同事对象，这样它才能与同事对象进行交互。也就是说中介者对象和同事对象之间是相互依赖的。
+ *
+ * 如何实现同事和中介者的通信
+ * 一个同事对象发生了改变，会通知中介者对象，中介者对象会处理与其他同事的交互，这就产生了同事对象和中介者对象的相互通信。
+ * 一个实现方式是在Mediator接口中定义一个特殊的通知接口，作为一个通用的方法，让各个同事类来调用这个方法，在中介者模式结构图里画的就是这种方式。例如定义了一个通用的changed方法，并且把同事对象当作参数传入，这样在中介者对象里面，就可以去获取这个同事对象的实例数据了。
+ * 另外一种实现方式是可以采用观察者模式，把Mediator实现成为观察者，而各个同事类实现成为Subject，这样同事类发生了改变，会通知Mediator。Mediator在接到通知以后，会于相应的同事对象进行交互。
+ *
+ */
+
+// 示例代码
+
+(function(){
+    function Colleague(mediator){
+    this.mediator = mediator;
+}
+Colleague.prototype = {
+    getMediator: function(){
+        return this.mediator;
+    }
+};
+
+// 同事类A
+function ColleagueA(mediator){
+    ColleagueA.super.constructor.apply(this, arguments);
+}
+extend(ColleagueA, Colleague);
+ColleagueA.prototype.someOperation= function(){
+    // some code..
+     
+    // 在需要跟其他同事通信的时候，通知中介者对象
+    this.getMediator().changed(this);
+}
+
+function ColleagueB(mediator){
+    ColleagueB.super.constructor.call(this);
+}
+extend(ColleagueB, Colleague);
+ColleagueB.prototype.someOperation= function(){
+    // some code..
+    
+    // 在需要跟其他同事通信的时候，通知中介者对象
+    this.getMediator().changed(this);
+};
+
+// 中介者
+function Mediator(){
+    var colleagueA, colleagueB;
+
+    // 设置中介者需要了解并维护的同事A对象
+    this.setColleagueA = function(colleague){
+        colleagueA = colleague;
+    };
+
+    // 设置中介者需要了解并维护的同事B对象
+    this.setColleagueB = function(colleague){
+        colleagueB = colleague;
+    };
+
+    this.changed = function(colleague){
+        // 某个同事类发生了变化，通常需要与其他同事交互
+        // 具体协调相应的同事对象来实现协作行为
+    };
+}
+}());
+
+(function(){
+    // 抽象同事类
+    var Colleague = function(mediator){
+        this.mediator = mediator;
+    };
+    Colleague.prototype = {
+        getMediator: function(){
+            return this.mediator;
+        }
+    };
+
+    // 光驱类
+    var CDDriver = function(){
+        CDDriver.super.constructor.apply(this, arguments);
+
+        this.data = '';
+    };
+    extend(CDDriver, Colleague);
+    override(CDDriver.prototype, {
+        getData: function(){
+            return this.data;
+        },
+        readCD: function(){
+            this.data = 'CDDriver Data, SoundCard Data';
+            // 通知主板，自己的状态发生了变化
+            this.getMediator().changed(this);
+        }
+    });
+
+    // CPU类
+    var CPU = function(){
+        CPU.super.constructor.apply(this, arguments);
+
+        this.videoData = '';
+        this.soundData = '';
+    };
+    extend(CPU, Colleague);
+    override(CPU.prototype, {
+        // 获取分解出来的视频数据
+        getVideoData: function(){
+            return this.videoData;
+        },
+        // 获取分解出来的声音数据
+        getSoundData: function(){
+            return this.soundData;
+        },
+        executeData: function(data){
+            var ss = data.split(',');
+            this.videoData = ss[0];
+            this.soundData = ss[1];
+            // 通知主板，CPU的工作完成
+            this.getMediator().changed(this);
+        }
+    });
+
+    // 显卡类
+    var VideoCard = function(){
+        VideoCard.super.constructor.apply(this, arguments);
+    };
+    extend(VideoCard, Colleague);
+    override(VideoCard.prototype, {
+        showData: function(data){
+            console.log('您正在观看的是：' + data);
+        }
+    });
+
+    // 声卡类
+    var SoundCard = function(){
+        SoundCard.super.constructor.apply(this, arguments);
+    };
+    extend(SoundCard, Colleague);
+    override(SoundCard.prototype, {
+        soundData: function(data){
+            console.log('画外音：' + data);
+        }
+    });
+
+    // 中介对象接口
+    var Mediator = function(){};
+    Mediator.prototype = {
+        changed: function(colleague){}
+    };
+
+    var MotherBoard = function(){
+    };
+    extend(MotherBoard, Mediator);
+    override(MotherBoard.prototype, {
+        setCdDriver: function(cdDriver){
+            this.cdDriver = cdDriver;
+        },
+        setCpu: function(cpu){
+            this.cpu = cpu;
+        },
+        setVideoCard: function(videoCard){
+            this.videoCard = videoCard;
+        },
+        setSoundCard: function(soundCard){
+            this.soundCard = soundCard;
+        },
+
+        changed: function(colleague){
+            switch(colleague) {
+                case this.cdDriver:
+                    this.opeCDDriverReadData(colleague);
+                    break;
+                case this.cpu:
+                    this.opeCPU(colleague);
+                    break;
+                default:
+                    break;
+            }
+        },
+
+        opeCDDriverReadData: function(cd){
+            this.cpu.executeData(cd.getData());
+        },
+        opeCPU: function(cpu){
+            this.videoCard.showData(cpu.getVideoData());
+            this.soundCard.soundData(cpu.getSoundData());
+        }
+    });
+
+    void function run(){
+        var mediator = new MotherBoard();
+        var cd = new CDDriver(mediator);
+        var cpu = new CPU(mediator);
+        var vc = new VideoCard(mediator);
+        var sc = new SoundCard(mediator);
+
+        mediator.setCdDriver(cd);
+        mediator.setCpu(cpu);
+        mediator.setVideoCard(vc);
+        mediator.setSoundCard(sc);
+
+        cd.readCD();
+    }();
+
+}());
+
+/**
+ * 广义中介者
+ *
+ * 在实际开发中，经常会简化中介者模式，比如有如下简化：
+ * 1.通常会去掉同事对象的父类，这样可以让人意的对象，只要需要相互交互，就可以成为同事。
+ * 2.通常不定义Mediator接口，把具体的中介者对象实现成为单例。
+ * 3.同事对象不再持有中介者，而是在需要的时候直接获取中介者对象并调用；中介者也不再持有同事对象，而是在具体处理方法里面去创建，或者获取，或者从参数传入需要的同事对象。
+ */
+
+// 部门与人员的交互
+(function(){
+    // 部门类
+    var Dep = function(){
+        // 描述部门编号
+        this.depId = '';
+        // 描述部门名称
+        this.depName = '';
+    };
+    Dep.prototype = {
+        getDepId: function(){
+            return this.depId;
+        },
+        setDepId: function(depId){
+            this.depId = depId;
+        },
+        getDepName: function(){
+            return this.depName;
+        },
+        setDepName: function(depName){
+            this.depName = depName;
+        },
+        // 撤销部门
+        deleteDep: function(){
+            // 要先通过中介者去除掉所有与这个部门相关的部门和人员的关系。
+            var mediator = DepUserMediatorImpl.getInstance();
+            mediator.deleteDep(this.depId);
+
+            // 然后才能真正地清除掉这个部门
+            // 在实际开发中，这些业务功能可能会做到业务层去
+            // 而且实际开发中对于已经使用的业务数据通常不会被删除
+            // 而是会被作为历史数据保留
+            return true;
+        }
+    };
+
+    // 人员类
+    var User = function(){
+        // 人员编号
+        this.userId = '';
+        // 人员名称
+        this.userName = '';
+    };
+    User.prototype = {
+        getUserId: function(){
+            return this.userId;
+        },
+        setUserId: function(userId){
+            this.userId = userId;
+        },
+        getUserName: function(){
+            return this.userName;
+        },
+        setUserName: function(userName){
+            this.userName = userName;
+        },
+        // 人员离职
+        dimission: function(){
+            var mediator = DepUserMediatorImpl.getInstance();
+            mediator.deleteUser(this.userId);
+
+            return true;
+        }
+    };
+
+    // 描述部门和人员关系的类
+    var DepUserModel = function(){
+        // 用于部门和人员关系的编号，用作主键
+        this.depUserId = '';
+        this.depId = '';
+        this.userId = '';
+    };
+    DepUserModel.prototype = {
+        setDepUserId: function(depUserId){
+            this.depUserId = depUserId;
+        },
+        getDepUserId: function(){
+            return this.depUserId;
+        },
+        setDepId: function(depId){
+            this.depId = depId;
+        },
+        getDepId: function(){
+            return this.depId;
+        },
+        setUserId: function(userId){
+            this.userId = userId;
+        },
+        getUserId: function(){
+            return this.userId;
+        }
+    };
+
+    // 中介者对象
+    var DepUserMediatorImpl = function(){
+        // 记录部门和人员的关系
+        this.depUserCol = [];
+        this.initTestData();
+    };
+    DepUserMediatorImpl.getInstance = function(){
+        if(!(DepUserMediatorImpl.instance instanceof DepUserMediatorImpl)) {
+            DepUserMediatorImpl.instance = new DepUserMediatorImpl();
+        }
+        return DepUserMediatorImpl.instance;
+    };
+    DepUserMediatorImpl.prototype = {
+        // 初始化测试数据
+        initTestData: function(){
+            var du1 = new DepUserModel();
+            du1.setDepUserId('du1');
+            du1.setDepId('d1');
+            du1.setUserId('u1');
+            this.depUserCol.push(du1);
+
+            var du2 = new DepUserModel();
+            du2.setDepUserId('du2');
+            du2.setDepId('d1');
+            du2.setUserId('u2');
+            this.depUserCol.push(du2);
+
+            var du3 = new DepUserModel();
+            du3.setDepUserId('du3');
+            du3.setDepId('d2');
+            du3.setUserId('u3');
+            this.depUserCol.push(du3);
+
+            var du4 = new DepUserModel();
+            du4.setDepUserId('du4');
+            du4.setDepId('d2');
+            du4.setUserId('u4');
+            this.depUserCol.push(du4);
+
+            var du5 = new DepUserModel();
+            du5.setDepUserId('du5');
+            du5.setDepId('d2');
+            du5.setUserId('u1');
+            this.depUserCol.push(du5);
+        },
+        // 完成因撤销部门的操作所引起的与人员的交互，需要去除相应的关系
+        deleteDep: function(depId){
+            for(var i = 0; i < this.depUserCol.length; i++){
+                if(this.depUserCol[i].depId === depId){
+                    this.depUserCol.splice(i--, 1);
+                }
+            }
+
+            return true;
+        },
+        // 完成因人员离职引起的与部门的交互
+        deleteUser: function(userId){
+            for(var i = 0; i < this.depUserCol.length; i++){
+                if(this.depUserCol[i].userId === userId){
+                    this.depUserCol.splice(i--, 1);
+                }
+            }
+
+            return true;
+        },
+        // 显示一个部门想啊的所有人员
+        showDepUsers: function(dep){
+            var du;
+            for(var i = 0, len = this.depUserCol.length; i < len; i++){
+                du = this.depUserCol[i];
+                if(du.depId === dep.depId) {
+                    console.log('部门编号=' + dep.depId + '下面拥有的人员，其编号是：' + du.userId);
+                }
+            }
+        },
+        // 显示一个人员所属的部门
+        showUserDeps: function(user){
+            var du;
+            for(var i = 0, len = this.depUserCol.length; i < len; i++){
+                du = this.depUserCol[i];
+                if(du.userId === user.userId) {
+                    console.log('人员编号=' + user.userId + '属于部门编号是' + du.depId);
+                }
+            }
+        },
+        cjageDep: function(){
+            // ..省略
+            return false;
+        },
+        joinDep: function(colDepIds, newDep){
+            // ...省略
+            return false;
+        }
+    };
+
+    var mediator = DepUserMediatorImpl.getInstance();
+    var dep = new Dep();
+    dep.setDepId('d1');
+    var dep2 = new Dep();
+    dep2.setDepId('d2');
+    var user = new User();
+    user.setUserId('u1');
+
+    console.log('撤销部门前---------------------');
+    mediator.showUserDeps(user);
+    dep.deleteDep();
+    console.log('撤销部门后---------------------');
+    mediator.showUserDeps(user);
+
+    console.log('-----------人员离职前-----------');
+    mediator.showDepUsers(dep2);
+    user.dimission();
+    console.log('----------人员离职后------------');
+    mediator.showDepUsers(dep2);
+
+}());
+
+/**
+ * 中介者模式的优点：
+ * 1.松散耦合
+ * 中介者模式用过把多个同事对象之间的交互封装到中介者对象里面，从而使得同事对象之间松散耦合，基本上可以做到互不依赖。这样一来，同事对象就可以独立变化和复用，从而不再像以前那样“牵一发而动全身”。
+ *
+ * 2.集中控制交互
+ * 多个同事对象的交互，被封装在中介者对象里面集中管理，使得这些交互行为发生变化的时候，只需要修改中介者对象就可以了，当然如果是已经做好的系统，那就扩展中介者对象，而各个同事类不需要做修改。
+ *
+ * 3.多对多变成一对多
+ * 没有使用中介者模式的时候，同事对象之间的关系通常是多对多的，引入中介者对象之后，中介者对象和同事对象的关系通常变成了双向的一对多，这会让对象的关系更让哦难以理解和实现。
+ *
+ *
+ * 中介者模式的缺点：
+ * 1.过度集中化
+ * 如果同事对象的交互非常多，而且比较复杂，当这些复杂性全部集中到中介者的时候，会导致中介者对象变得十分复杂，而且难于管理和维护。
+ *
+ * 何时选用中介者模式
+ * 
+ * 1.如果一组对象之间的通信比较复杂，导致相互依赖，结构混乱，可以采用中介者模式，吧这些对象相互的交互管理起来，各个对象都只需要和中介者交互，从而使得各个对象松散耦合，结构也更清晰易懂。
+ *
+ * 2.如果一个对象引用很多对象，并直接跟这些对象交互，导致难以复用该对象，可以采用中介者模式，把这个对象跟其他对象的交互封装到中介者对象里面，这个对象只需要和中介者对象交互就可以了。
+ *
+ * 相关模式
+ *
+ * 中介者模式和外观模式
+ * 这两个模式有相似的地方，也存在很大的不同。
+ * 外观模式多用来封装一个子系统内部的多个模块，目的是想子系统外部提供简单易用的接口。也就是说外观模式封装的是子系统外部和子系统内部模块间的交互；而中介者模式是提供多个平等的同事对象之间交互关系的封装，一般是用在内部实现上。
+ * 另外，外观模式是实现单向的交互，是从子系统外部来调用子系统内部，不会反着来；而中介者模式实现的是内部多个模块间多向的交互。
+ *
+ * 中介者模式和观察者模式
+ * 这两个模式可以组合使用。
+ * 中介者模式可以组合使用观察者模式，来实现当同事对象发生改变的时候，通知中介者对象，让中介对象去进行与其他相关对象的交互。
+ */
+
+// example
+/* Title: Mediator
+ Description: allows loose coupling between classes by being the only class that has detailed knowledge of their methods
+ */
+
+(function(){
+    function Player(name) {
+    this.points = 0;
+    this.name = name;
+}
+Player.prototype.play = function () {
+    this.points += 1;
+    mediator.played();
+};
+var scoreboard = {
+
+    // HTML element to be updated
+    element:document.getElementById('results'),
+
+    // update the score display
+    update:function (score) {
+        var i, msg = '';
+        for (i in score) {
+            if (score.hasOwnProperty(i)) {
+                msg += '<p><strong>' + i + '<\/strong>: ';
+                msg += score[i];
+                msg += '<\/p>';
+            }
+        }
+        this.element.innerHTML = msg;
+    }
+};
+
+var mediator = {
+
+    // all the player
+    players:{},
+
+    // initialization
+    setup:function () {
+        var players = this.players;
+        players.home = new Player('Home');
+        players.guest = new Player('Guest');
+    },
+
+    // someone plays, update the score
+    played:function () {
+        var players = this.players,
+            score = {
+                Home:players.home.points,
+                Guest:players.guest.points
+            };
+
+        scoreboard.update(score);
+    },
+
+    // handle user interactions
+    keypress:function (e) {
+        e = e || window.event; // IE
+        if (e.which === 49) { // key "1"
+            mediator.players.home.play();
+            return;
+        }
+        if (e.which === 48) { // key "0"
+            mediator.players.guest.play();
+            return;
+        }
+    }
+};
+
+// go!
+mediator.setup();
+window.onkeypress = mediator.keypress;
+
+// game over in 30 seconds
+setTimeout(function () {
+    window.onkeypress = null;
+    console.log('Game over!');
+}, 30000);
+}());
+
+
+
+// http://www.dofactory.com/javascript-mediator-pattern.aspx
+
+(function(){
+    var Participant = function(name) {
+    this.name = name;
+    this.chatroom = null;
+};
+
+Participant.prototype = {
+    send: function(message, to) {
+        this.chatroom.send(message, this, to);
+    },
+    receive: function(message, from) {
+        log.add(from.name + " to " + this.name + ": " + message);
+    }
+};
+
+var Chatroom = function() {
+    var participants = {};
+    return {
+        register: function(participant) {
+            participants[participant.name] = participant;
+            participant.chatroom = this;
+        },
+        send: function(message, from, to) {
+            if (to) {                      // single message
+                to.receive(message, from);    
+            } else {                       // broadcast message
+                for (key in participants) {   
+                    if (participants[key] !== from) {
+                        participants[key].receive(message, from);
+                    }
+                }
+            }
+        }
+    };
+};
+
+// log helper
+var log = (function() {
+    var log = "";
+    return {
+        add: function(msg) { log += msg + "\n"; },
+        show: function() { alert(log); log = ""; }
+    }
+})();
+
+
+function run() {
+
+    var yoko = new Participant("Yoko");
+    var john = new Participant("John");
+    var paul = new Participant("Paul");
+    var ringo = new Participant("Ringo");
+
+    var chatroom = new Chatroom();
+    chatroom.register(yoko);
+    chatroom.register(john);
+    chatroom.register(paul);
+    chatroom.register(ringo);
+
+    yoko.send("All you need is love.");
+    yoko.send("I love you John.");
+    john.send("Hey, no need to broadcast", yoko);
+    paul.send("Ha, I heard that!");
+    ringo.send("Paul, what do you think?", paul);
+
+    log.show();
+}
+}());
+
+</script>
+</body>
+</html>

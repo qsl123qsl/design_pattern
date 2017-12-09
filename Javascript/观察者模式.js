@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>观察者模式</title>
+    <meta charset="utf-8">
+</head>
+<body>
+<script>
+    function extend(subclass, superclass) {
+        var F = function () {
+        };
+        F.prototype = superclass.prototype;
+        subclass.prototype = new F();
+        subclass.prototype.constructor = subclass;
+        subclass.super = superclass.prototype;
+
+
+        if (superclass.prototype.constructor === Object.prototype.constructor) {
+            superclass.prototype.constructor = superclass;
+        }
+    }
+</script>
+<script>
+/**
+ * 观察者模式
+ *
+ * 定义：
+ * 定义对象间的一种一对多的依赖关系。当一个对象的状态发生改变时，所有依赖于它的对象都得到通知并被自动更新。
+ *
+ * 本质：
+ * 触发联动
+ *
+ * 本质：
+ * 当修改目标对象的状态的时候，就会触发相应的通知，然后会循环调用所有注册的观察者对象的相应方法，其实就相当于联动调用这些观察者的方法。
+ * 而且这个联动还是动态的，可以通过注册和取消注册来控制观察者，因而可以在程序运行期间，通过动态地控制观察者，来变相地实现添加和删除某些功能处理，这些功能就是观察者在update的时候执行的功能。
+ * 同时目标对象和观察者对象的解耦，又保证了无论观察者发生怎样的变化，目标对象总是能够正确地联动起来。
+ *
+ *
+ * 在事件驱动的环境中。比如浏览器这种持续寻求用户关注的环境中，观察者模式（又名发布者-订阅者（publisher-subscriber）模式）是一种管理人与其人物之间的关系（确却的讲，是对象及其行为和状态之间的关系）的得力工具。这种模式的实质就是你可以对程序中某个对象的状态进行观察，并且在其发生改变时能够得到通知。
+ * 观察者模式中存在两个角色：观察者和被观察者，又叫发布者和订阅者。
+ *
+ * 认识观察者
+ *
+ * 1.目标和观察者之间的关系
+ * 按照模式的定义，目标和观察者之间是典型的一对多的关系。
+ * 但是要注意，如果观察者只有一个，也是可以的，这样就变相实现了目标和观察者之间一对一的关系，这也使得在处理一个对象的状态变化会影响到另一个对象的时候，也可以考虑使用观察者模式。
+ * 同样地，一个观察者也可以观察多个目标，如果观察者为多个目标定义的通知更新方法都是update方法的话，这会带来麻烦，因为需要接受多个目标的通知，如果一个update方法，那就需要在方法内部区分，到底这个更新的通知来自于哪个目标，不同的目标有不同的后续操作。
+ * 一般情况下，观察者应该为不同的观察者目标定义不同的回调方法，这样实现最简单，不需要在update方法内部进行区分。
+ *
+ * 2.单向依赖
+ * 在观察者模式中，观察者和目标是单向依赖的，只有观察者依赖于目标，而目标是不会依赖于观察者的。
+ * 它们之间联系的主动权掌握在目标手中，只有目标知道什么时候需要通知观察者，在整个过程中，观察者始终是被动的，被动地等待目标的通知，等待目标传值给它。
+ * 对目标而言，所有的观察者都是一样的，比如某些状态变化，只需要通知部分观察者，但那是属于稍微变形的用法了，不属于标准的，原始的观察者模式了。
+ *
+ * 3.基本的实现说明
+ * 1）具体的目标实现对象要能维护观察者的注册信息，最简单的实现方案就如同下面的例子，采用一个集合来保存观察者的注册信息。
+ * 2）具体的目标实现对象需要维护引起通知的状态，一般情况下是目标自身的状态，变形使用情况下，也可以识别的对象的状态。
+ * 3）具体的观察者实现对象需要能接受目标的通知，能够接受目标传递的数据，或者是能够主动去获取目标的数据，并进行后续处理。
+ * 4）如果是一个观察者观察多个目标，那么在观察者的更新方法里面，需要去判断是来自哪一个目标。一种简单的解决方案就是扩展update方法，比如在方法里面多传递一个参数进行区分等；还有一种更简单的方法，那就是干脆定义不同的回调方法。
+ *
+ * 4.命名建议
+ * 1）观察者模式有被称为发布订阅模式
+ * 2）目标接口的定义，建议在名称后面跟Subject
+ * 3）观察者接口的定义，建议在后面跟Observer
+ * 4）观察者接口的更新方法，建议名称为uodate，当然方法的参数可以根据需要定义，参数个数不限，参数类型不限。
+ *
+ * 5.触发时机
+ * 在实现观察者模式的时候，一定要注意触发通知的时机。一般情况下，是在完成了状态维护后触发，因为通知会传递数据，不能够先通知后改数据，这很容易出问题，会导致观察者和目标对象的状态不一致。
+ *
+ * 6.相互观察
+ * 在某些应用中，可能会出现目标和观察者相互观察的情况。比如有两套观察者模式的应用，其中一套观察者模式的实现是A对象，B对象观察C对象；在另一套观察者模式的实现里面，实现的是B对象，C对象观察A对象，那么A对象和C对象就是在相互观察，
+ * A对象的状态便会引起C对象的联动操作，反过来，C对象的状态变化也会引起A对象的联动操作。对于出现这种状况，要特别小心处理，因为可能会出现死循环的情况。
+ *
+ * 7.观察者模式的调用顺序
+ * 一，准备阶段（维护目标和观察者关系的阶段）
+ * 1.创建目标对象
+ * 2.创建观察者
+ * 3.向目标对象注册观察者对象
+ *
+ * 二，运行阶段
+ * 1.改变目标对象的状态
+ * 2.通知所有注册的观察者对象进行相应的处理
+ * 3.回调目标对象，获取相应的数据
+ *
+ * 8.通知的顺序
+ * 从理论上来说，当目标对象的状态变化后通知所有观察者的时候，顺序是不确定的，因此观察者实现的功能，绝对不要依赖于通知的顺序。也就是说，多个观察者之间的功能是平行的，相互不应该有先后的依赖关系。
+ *
+ *
+ * 何时使用
+ * 1.当一个抽象模型有两个方面，其中一个方面的操作依赖于另一个方面的状态变化，那么就可以选用观察者模式，将这两者封装成观察者和目标对象，当目标对象变化的时候，依赖于它的观察者对象也会发生相应的变化。这样就把抽象模型的这两个方面分离开了，使得他们可以独立地改变和复用。
+ * 2.如果在更改一个对象的时候，需要同时连带改变其他的对象，而且不知道究竟应该有多少对象需要被连带改变，这种情况可以选用观察者模式，被更改的哪一个对象很明显就相当于是目标对象，而需要连带修改的多个其他对象，就作为多个观察者对象了。
+ * 3.当一个对象必须通知其他对象，但是你又希望这个对象和其他被它统治的对象是松散耦合的。这个对象相当于是目标对象，而被它通知的对象就是观察者对象了。
+ */
+
+(function () {
+    // 示例代码
+
+    /**
+     * 目标对象，它知道观察它的观察者，并提供注册和删除观察者的接口
+     */
+    var Subject = function () {
+        // 用来保存注册的观察者对象
+        this.observers = [];
+    };
+    Subject.prototype = {
+        // 注册观察者对象
+        attach: function (observer) {
+            this.observers.push(observer);
+        },
+        // 删除观察者对象
+        detach: function (observer) {
+            for (var i = 0, len = this.observers.length; i < len; i++) {
+                if (observer = this.observers[i]) {
+                    this.observers.splice(i, 1);
+                    return true;
+                }
+            }
+
+            return false;
+        },
+        // 通知所有注册的观察者对象
+        notifyObservers: function () {
+            for (var i = 0, len = this.observers.length; i < len; i++) {
+                this.observers[i].update(this);
+            }
+        }
+    };
+
+    /**
+     * 具体的目标对象，份额则把有关状态存入到相应的观察者对象
+     * 并在自己状态发生改变时，通知各个观察者
+     */
+    var ConcreteSubject = function () {
+        ConcreteSubject.super.constructor.call(this);
+        // 目标对象状态
+        this.subjectState = '';
+    };
+    extend(ConcreteSubject, Subject);
+    ConcreteSubject.prototype.getSubjectState = function () {
+        return this.subjectState;
+    };
+    ConcreteSubject.prototype.setSubjectState = function (subjectState) {
+        this.subjectState = subjectState;
+        // 状态发生改变，通知各个观察者
+        this.notifyObservers();
+    };
+
+    // 观察者接口，定义一个更新的接口给那些在目标发生改变的时候被通知的对象
+    var Observer = function () {
+    };
+    Observer.prototype.update = function () {
+    };
+
+    var ConcreteObserver = function () {
+        this.observerState = '';
+    };
+    extend(ConcreteObserver, Observer);
+    ConcreteObserver.prototype.update = function (subject) {
+        this.observerState = subject.getSubjectState();
+    };
+}());
+
+(function () {
+    // 订阅报纸,拉模型
+
+    // 目标对象，作为被观察者，报社
+    function Subject() {
+        this.readers = [];
+    }
+
+    Subject.prototype = {
+        // 报纸的读者需要向报社订阅，先要注册
+        attach: function (reader) {
+            this.readers.push(reader);
+        },
+        detach: function (reader) {
+            for (var i = 0, len = this.readers.length; i < len; i++) {
+                if (reader === this.readers[i]) {
+                    this.readers.splice(i, 1);
+                    return;
+                }
+            }
+        },
+        // 当每期报纸印刷出来后，就要迅速主动地被送到读者的手中
+        // 相当于通知读者，让他们知道
+        notifyObservers: function () {
+            for (var i = 0, len = this.readers.length; i < len; i++) {
+                this.readers[i].update(this);
+            }
+        }
+    };
+
+    // 报纸对象，具体的目标实现
+    function NewsPaper() {
+        NewsPaper.super.constructor.call(this);
+        this.content = '';
+    }
+
+    extend(NewsPaper, Subject);
+    // 获取报纸的具体内容
+    NewsPaper.prototype.getContent = function () {
+        return this.content;
+    };
+    // 设置报纸的具体内容，相当于要出版报纸了
+    NewsPaper.prototype.setContent = function (content) {
+        this.content = content;
+        // 内容有了，说明又出报纸了，那就通知所有的读者
+        this.notifyObservers();
+    };
+
+    // 观察者接口
+    function Observer() {
+    }
+
+    Observer.prototype.update = function () {
+    };
+
+
+    function Reader() {
+        this.name = '';
+    }
+
+    extend(Reader, Observer);
+    Reader.prototype.update = function (subject) {
+        console.log(this.name + '收到报纸了，阅读它，内容是：' + subject.getContent());
+    };
+
+    new function () {
+        var subject = new NewsPaper();
+
+        var reader1 = new Reader();
+        reader1.name = '张三';
+
+        var reader2 = new Reader();
+        reader2.name = '李四';
+
+        var reader3 = new Reader();
+        reader3.name = '王五';
+
+        subject.attach(reader1);
+        subject.attach(reader2);
+        subject.attach(reader3);
+
+        subject.setContent('本期内容是观察者模式');
+    }();
+}());
+
+(function () {
+    /**
+     * 推模型和拉模型
+     *
+     * 推模型
+     * 目标对象主动向观察者推送目标的详细信息，不管观察者是否需要，推送的信息通常是目标对象的全部或部分数据，相当于广播通信。
+     *
+     * 拉模型
+     * 目标对象在通知观察者的时候，值传递少量信息。如果观察者需要更具体的信息，有观察者主动到目标对象中获取，相当于是观察者从目标对象中拉数据。一般这种模式的实现中，会把目标对象自身通过update方法传递给观察者，这样在观察者需要获取数据的时候，就可以通过这个引用来获取了。
+     */
+
+    /*
+     前面的例子就是典型的拉模型，下面看看推模型的实现
+     */
+    // 订阅报纸,推模型
+
+    // 目标对象，作为被观察者，报社
+    function Subject() {
+        this.readers = [];
+    }
+
+    Subject.prototype = {
+        // 报纸的读者需要向报社订阅，先要注册
+        attach: function (reader) {
+            this.readers.push(reader);
+        },
+        detach: function (reader) {
+            for (var i = 0, len = this.readers.length; i < len; i++) {
+                if (reader === this.readers[i]) {
+                    this.readers.splice(i, 1);
+                    return;
+                }
+            }
+        },
+        /*
+         推模型的目标对象
+         跟拉模型的不同之处
+         1.通知所有观察者的方法，以前是没有参数的，现在需要传入需要主动推送的数据。
+         2.在循环通知观察者的时候，也就是循环调用观察者update方法的时候，传入的参数不同了
+         */
+        // 当每期报纸印刷出来后，就要迅速主动地被送到读者的手中
+        // 相当于通知读者，让他们知道
+        /*------------------------------------*/
+        notifyObservers: function (content) {
+            for (var i = 0, len = this.readers.length; i < len; i++) {
+                this.readers[i].update(content);
+            }
+        }
+        /*------------------------------------*/
+    };
+
+    // 报纸对象，具体的目标实现
+    function NewsPaper() {
+        NewsPaper.super.constructor.call(this);
+        this.content = '';
+    }
+
+    extend(NewsPaper, Subject);
+    // 获取报纸的具体内容
+    NewsPaper.prototype.getContent = function () {
+        return this.content;
+    };
+    // 设置报纸的具体内容，相当于要出版报纸了
+    /*------------------------------------*/
+    NewsPaper.prototype.setContent = function (content) {
+        this.content = content;
+        // 内容有了，说明又出报纸了，那就通知所有的读者
+        this.notifyObservers(content);
+    };
+    /*------------------------------------*/
+
+    // 观察者接口
+    function Observer() {
+    }
+
+    Observer.prototype.update = function () {
+    };
+
+
+    function Reader() {
+        this.name = '';
+    }
+
+    extend(Reader, Observer);
+    // 推模型通常都是把需要传递的数据直接推送给观察者对象，
+    // 所以观察者接口中的update方法的参数需要变化。
+    /*------------------------------------*/
+    Reader.prototype.update = function (content) {
+        // 以前需要到目标对象中获取自己需要的数据，现在是直接接受传入的数据
+        console.log(this.name + '收到报纸了，阅读它，内容是：' + content);
+    };
+    /*------------------------------------*/
+
+    new function () {
+        var subject = new NewsPaper();
+
+        var reader1 = new Reader();
+        reader1.name = '张三';
+
+        var reader2 = new Reader();
+        reader2.name = '李四';
+
+        var reader3 = new Reader();
+        reader3.name = '王五';
+
+        subject.attach(reader1);
+        subject.attach(reader2);
+        subject.attach(reader3);
+
+        subject.setContent('本期内容是观察者模式');
+    }();
+
+    /*
+     应该使用哪种模型
+  
+     1.推模型是假定目标对象知道观察者需要的数据；而拉模型是目标对象不知道观察者具体需要什么数据，没有办法的情况下，干脆把自身传给观察者，让观察者自己按需取值。
+     2.推模型可能会使得观察者对象难以复用，因为观察者定义的update方法是按需而定义的，可能无法兼顾所有情况。这意味着出现新情况的时候，就可能需要提供新的update方法，或者干脆重新实现观察者。
+     而拉模型就不会造成这样的情况，因为拉模型下，update方法的参数就、是目标对象本身，这基本上可以适应各种情况的需要。
+     */
+}());
+
+
+/*
+ 示例：报纸的投送(JS pro design pattern)
+
+ 在报纸行业中，发行和订阅的顺序进行有赖于一些关键性的角色和行为。首先是读者，他们都是订阅者（subscriber），他们消费数据并且根据读到的消息做出反应。。另一个角色是发行方（publisher），他们负责出版报纸。
+ 确定了各方的身份之后，我们就可以分析每一方的职责所在。作为报纸的订阅者，，数据到来的时候我们收到通知，我们消费数据，然后我们根据数据做出反应，只要报纸到了订阅者手中，他们就可以自行处理。总而言之，订阅者要从发行方接收数据。
+
+ 发行方则要发送数据。发行方也是投送房（deliver）。一般来说，一个发行方很可能有许多订阅者，同样，一个订阅者也很可能会订阅多家报社的报纸。问题的关键在于，这是一种多对多的关系，需要一种高级的抽象策略，以便订阅者能够彼此独立地发生变化，而发行方能够接受任何有消费意向的订阅者。
+
+ 对于报社来说，只为给几个订阅者投送报纸就满世界跑是不划算的。而纽约市民也不可能特意飞到旧金山去拿自己订的报纸，要知道这份报纸可以直接投送到他们家门口。
+ 订阅者要想拿到报纸的话有两种投送方式可选：推或拉。在推环境中，发行方很可能会雇佣投送人员四处送报。换句话说，他们把自己的报纸推出去，让订阅者收取。在拉环境中，规模较小的本地报社可能会在订阅者家附近的街角提供自己的数据，供订阅者“拉”。那么成长型发行方没有足够的资源进行大规模投送，因此采用拉方案，对于他们来说往往是个优化投送环节的好办法。
+ */
+
+/*
+ 模式的实践
+
+ （1）订阅者可以订阅和退订，它们还要接受。它们可以在”由人投送（being delivered to）“和“自己收取（receiving ）”之间进行选择（即推拉）。
+ （2）发布者负责投送，它们可以在“送出（giving）”和“由人取（being taken from）”之间进行选择
+
+ 下面是一个展示发布者和订阅者之间的互动过程的高层示例。它是Sells方法的一个示例。这种技术类似于测试驱动的开发（TDD），不过它要求先写实现代码。
+ */
+
+function test() {
+    /*
+     Publishers are in charge of "publishing" i.e. creating the event
+     They;re alse in charge of "notifying" (firing the event)
+     */
+    var Publisher = new Observable();
+
+    /*
+     Subscribers basically ,,, "subscribe" (or listen).
+     Once they've been "notified" their callback functions are invoked.
+     */
+    var Subscriber = function (news) {
+        // new delivered directly to my front porch
+    };
+    Publisher.subscribeCustomer(Subscriber);
+
+    /*
+     Deliver a paper
+     sends out the new to all subscribers
+     */
+    Publisher.deliver('extre, extre, read all about it');
+
+    /*
+     That customer forget to pay his bill
+     */
+    Publisher.unSubscribeCustomer(Subscriber);
+    /*
+     在这个模型中，可以看出发布者处于明显的主导地位。它们负责登记其顾客，而且有权停止为其投送。最后，新的报纸出版后它们会将其投送给顾客。
+     */
+
+    // 下面的例子处理的事同一类问题，但发布者和订阅者之间的互动方式有所不同
+    /*
+     Newspaper vendors
+     setup as new Publisher obejcts
+     */
+    var NewYorkTimes = new Publisher();
+    var AustinHerald = new Publisher();
+    var SfChronicle = new Publisher();
+
+    /*
+     People who like to read
+     (Subscribers)
+  
+     Each subscriber is set up as a callback method.
+     They all inherit from the Function prototype Object
+     */
+    var Joe = function (from) {
+        console.log('Delivery from ' + from + ' to Joe');
+    };
+    var Lindsay = function (from) {
+        console.log('Delivery from ' + from + ' to Lindsay');
+    };
+
+    /*
+     Here we allow them to subscribe to newspaper which are the Publisher object.
+     */
+    Joe.
+        subscribe(NewYorkTimes).
+        subscribe(SfChronicle);
+    Lindsay.
+        subscribe(AustinHerald).
+        subscribe(SfChronicle).
+        subscribe(NewYorkTimes);
+
+    /*
+     Then at any giving time in our application, our publishers can send off data for the subscribers to consume and react to.
+     */
+    NewYorkTimes.
+        deliver('Here is your paper!direct from the Big apple');
+    AustinHerald.
+        deliver('News').
+        deliver('Reviews').
+        deliver('Coupons');
+}
+;
+
+/*
+ 在这个例子中，发布者的创建方式和订阅者接收数据的方式没有多少改变，但拥有订阅和退订的一方变成了订阅者。当然，负责发送数据的还是发布者一方。
+ */
+
+// 扩展链式调用方法
+Function.prototype.method = function (name, fn) {
+    this.prototype[name] = fn;
+    return this;
+};
+
+// 扩展数组方法
+if (!Array.prototype.forEach) {
+    Array.method('forEach', function (fn, thisObj) {
+        var scope = thisObj || window;
+        for (var i = 0, len = this.length; i < len; i++) {
+            fn.call(scope, this[i], i, this);
+        }
+    });
+}
+
+if (!Array.prototype.filter) {
+    Array.method('filter', function (fn, thisObj) {
+        var scope = thisObj || window;
+        var a = [];
+        for (var i = 0, len = this.length; i < len; i++) {
+            if (!fn.call(scope, this[i], i, this)) {
+                continue;
+            }
+            a.push(this[i]);
+        }
+        return a;
+    });
+}
+
+Array.prototype.some = Array.prototype.some || function (fn, context) {
+    for (var i = this, len = this.length; i < len; i++) {
+        if (fn.call(context)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+// demo:
+function isBigEnough(element, index, array) {
+    return (element >= 10);
+}
+var filtered = [12, 5, 8, 130, 44].filter(isBigEnough);
+// 12, 130, 44
+
+
+// 添加观察者系统
+window.DED = window.DED || {};
+DED.util = DED.util || {};
+DED.util.Observer = function () {
+    this.fns = [];
+};
+DED.util.Observer.prototype = {
+    subscribe: function (fn) {
+        this.fns.push(fn);
+    },
+    unsubscribe: function (fn) {
+        // 取消订阅当前函数
+        this.fns = this.fns.filter(function (el) {
+            if (el !== fn) {
+                return el;
+            }
+        });
+    },
+    fire: function (o) {
+        // 触发（运行）所有保存的函数
+        this.fns.forEach(function (el) {
+            el(o);
+        });
+    }
+};
+
+// 构建观察者API
+function Publisher() {
+    this.subscribers = [];
+}
+// 投送方法
+Publisher.prototype.deliver = function (data) {
+    this.subscribers.forEach(function (fn) {
+        fn(data);
+    });
+    return this;
+};
+// 订阅方法
+Function.prototype.subscribe = function (publisher) {
+    var that = this;
+    var alreadyExists = publisher.subscribers.some(function (el) {
+        return el === that;
+    });
+    if (!alreadyExists) {
+        publisher.subscribers.push(this);
+    }
+    return this;
+};
+// 退订方法
+Function.prototype.unsubscribe = function (publisher) {
+    var that = this;
+    publisher.subscribers = publisher.subscribers.filter(function (el) {
+        return el !== that;
+    });
+    return this;
+};
+
+// 有些订阅者在监听到某种一次性的事件之后会在回调阶段立即退订事件：
+var publisherObject = new Publisher();
+var observerObject = function (data) {
+    // process data
+    console.log(data);
+    // unsubscribe from this publisher
+    arguments.callee.unsubscribe(publisherObject);
+};
+observerObject.subscribe(publisherObject);
+publisherObject.deliver('This is news');
+
+
+// 示例：动画
+// Publisher API
+var Animation = function (o) {
+    this.onStart = new Publisher();
+    this.onComplete = new Publisher();
+    this.onTween = new Publisher();
+};
+Animation.prototype = {
+    fly: function () {
+        // begin animation
+        this.onStart.deliver();
+        /*
+         for(...) { // loop through frames
+         //deliver frame number
+         this.onTween.deliver(i);
+         }
+         */
+        // end animation
+        this.onComplete.deliver();
+    }
+};
+
+// setup an account with the animation manager
+var superman = new Animation({
+    // config properties
+});
+
+// Begin implementing subscribers
+var putOnCape = function (i) {
+};
+var takeOffCape = function (i) {
+};
+
+putOnCape.subscribe(superman.onStart);
+takeOffCape.subscribe(superman.onComplete);
+
+function main() {
+    // fly can be called anywhere
+    superman.fly();
+    // for instance
+    addEvent(element, 'click', function () {
+        superman.fly();
+    });
+}
+
+(function () {
+    // 变形示例，通知相应的观察者或部分观察者
+
+    function WatcherObserver() {
+        this.job = '';
+    }
+
+    WatcherObserver.prototype = {
+        update: function (subject) {
+            // 拉模型
+            console.log(this.job + '获取到通知，当前污染级别为：' + subject.getPolluteLevel());
+        }
+    };
+
+    function WaterQualitySubject() {
+        this.polluteLevel = 0;
+        this.observers = [];
+    }
+
+    WaterQualitySubject.prototype = {
+        attach: function (observer) {
+            this.observers.push(observer);
+        },
+        detach: function (observer) {
+            for (var i = 0, len = this.observers.length; i < len; i++) {
+                if (observer === this.observers[i]) {
+                    this.observers.splice(i, 1);
+                    return;
+                }
+            }
+        },
+        notifyWatchers: function () {
+            var watcher;
+            for (var i = 0, len = this.observers.length; i < len; i++) {
+                watcher = this.observers[i];
+                if (this.polluteLevel >= 0) {
+                    if (watcher.job === '检测人员') {
+                        watcher.update(this);
+                    }
+                }
+
+                if (this.polluteLevel >= 1) {
+                    if (watcher.job === '预警人员') {
+                        watcher.update(this);
+                    }
+                }
+
+                if (this.polluteLevel >= 2) {
+                    if (watcher.job === '检测部门领导') {
+                        watcher.update(this);
+                    }
+                }
+            }
+        },
+        getPolluteLevel: function () {
+            return this.polluteLevel;
+        },
+        setPolluteLevel: function (level) {
+            this.polluteLevel = level;
+            this.notifyWatchers();
+        }
+    };
+
+    new function () {
+        var subject = new WaterQualitySubject();
+        var watch1 = new WatcherObserver();
+        watch1.job = '检测人员';
+        var watch2 = new WatcherObserver();
+        watch2.job = '预警人员';
+        var watch3 = new WatcherObserver();
+        watch3.job = '检测部门领导';
+
+        subject.attach(watch1);
+        subject.attach(watch2);
+        subject.attach(watch3);
+
+        console.log('当水质为正常的时候--------------------');
+        subject.setPolluteLevel(0);
+        console.log('当水质为轻度的时候--------------------');
+        subject.setPolluteLevel(1);
+        console.log('当水质为中度的时候--------------------');
+        subject.setPolluteLevel(2);
+    }();
+}());
+
+/**
+ * 优点
+ *
+ * 1.观察者模式实现了观察者和目标之间的抽象耦合
+ * 原本目标对象在状态发生改变的时候，需要直接调用所有的观察者对象，但是抽象出观察者接口以后，目标和观察者就只是在抽象层面上耦合了，也就是说目标只是知道观察者接口，并不知道具体的观察者的类，从而实现目标类和具体的观察者类之间解耦。
+ *
+ * 2.观察者模式实现了动态联动
+ * 所谓联动，就是做一个操作会引起其他相关的操作。由于观察者模式对观察者注册实现管理，那就可以在运行期间，通过动态地控制注册的观察者，来控制某个动作的联动范围，从而实现动态联动。
+ *
+ * 3.观察者模式支持广播通信
+ * 由于目标发送通知给观察者是面向所有注册的观察者，所以每次目标通知的信息就要对所有注册的观察者进行广播。当然，也可以通过在目标上添加新的功能来限制广播的范围。
+ * 在广播通信的时候要注意一个问题，就是相互广播造成死循环的问题。比如A和B两个对象互为观察者和目标对象。
+ *
+ * 缺点
+ *
+ * 1.可能会引起无谓的操作
+ * 由于观察者模式每次都是广播通信，不管观察者需不需要，每个观察者都会被调用update方法，如果观察者不需要执行相应处理，那么这次操作就浪费了，甚至引起误更新。比如，本应该在执行这次状态更新前把某个观察者删除掉，这样通知的时候就没有这个观察者了，但是却忘了，那么就会引起误操作。
+ *
+ * 相关模式
+ *
+ * 观察者模式和状态模式
+ * 有相似之处。
+ * 观察者模式是当目标状态发生改变时，触发并通知观察者，让观察者去执行相应的操作。而状态模式是根据不同的状态，选择不同的实现，这个现实类的主要功能就是针对状态相应地操作，它不像观察者，观察者本身还有很多其他的功能，接收通知并执行相应处理知识观察者的部分功能。
+ * 当然观察者模式和状态模式是可以结合使用的。观察者模式的重心在触发联动，但是到底决定哪些观察者会被联动，这时就可以采用状态模式来实现了，也可以采用策略模式来进行选择需要联动的观察者。
+ *
+ * 观察者模式和中介者模式
+ * 可以结合使用。
+ * 如果观察者和被观察者之间的交互关系很复杂，比如，省级三级联动。这种情况下，很明显需要相关的状态都联动准备好了，然后再一次性地通知观察者。可以使用中介者模式来封装观察者和目标的关系。
+ * 在应用里面，比如，把一个界面所有的事件用一个对象来处理，把一个组件触发事件后，需要操作其他组件的动作都封装到一起，这个对象就是中介者了。
+ */
+
+// Javscript Patterns example:
+/* Title: Observer
+ Description: is a publish/subscribe pattern which allows a number of observer objects to see an event
+ */
+var Observer = {
+    addSubscriber: function (callback) {
+        this.subscribers[this.subscribers.length] = callback;
+    },
+    removeSubscriber: function (callback) {
+        for (var i = 0; i < this.subscribers.length; i++) {
+            if (this.subscribers[i] === callback) {
+                delete this.subscribers[i];
+            }
+        }
+    },
+    publish: function () {
+        for (var i = 0; i < this.subscribers.length; i++) {
+            if (typeof this.subscribers[i] === 'function') {
+                this.subscribers[i].apply(this, arguments);
+            }
+        }
+    },
+    make: function (o) {
+        for (var i in this) {
+            o[i] = this[i];
+            o.subscribers = [];
+        }
+    }
+};
+
+var blogger = {
+    writeBlogPost: function () {
+        var content = 'Today is ' + new Date();
+        this.publish(content);
+    }
+};
+
+var la_times = {
+    newIssue: function () {
+        var paper = 'Martians have landed on Earth.';
+        this.publish(paper);
+    }
+};
+
+Observer.make(blogger);
+Observer.make(la_times);
+
+var jack = {
+    read: function (what) {
+        console.log('I just read that ' + what);
+    }
+};
+
+var jill = {
+    gossip: function (what) {
+        console.log('You didn\'t hear it from me, but' + what);
+    }
+};
+
+blogger.addSubscriber(jack.read);
+blogger.addSubscriber(jill.gossip);
+blogger.writeBlogPost();
+
+blogger.removeSubscriber(jill.gossip);
+blogger.writeBlogPost();
+
+la_times.addSubscriber(jill.gossip);
+la_times.newIssue();
+
+
+// http://www.joezimjs.com/javascript/javascript-design-patterns-observer/
+// Now we’ll implement the pull method of the observer pattern.
+// When you’re using the pull method,
+// it makes more sense to swap things around a bit:
+Observable = function () {
+    this.status = "constructed";
+}
+Observable.prototype.getStatus = function () {
+    return this.status;
+}
+
+Observer = function () {
+    this.subscriptions = [];
+}
+Observer.prototype = {
+    subscribeTo: function (observable) {
+        this.subscriptions.push(observable);
+    },
+    unsubscribeFrom: function (observable) {
+        var i = 0,
+            len = this.subscriptions.length;
+
+        // Iterate through the array and if the observable is
+        // found, remove it.
+        for (; i < len; i++) {
+            if (this.subscriptions[i] === observable) {
+                this.subscriptions.splice(i, 1);
+                // Once we've found it and removed it, we
+                // don't need to continue, so just return.
+                return;
+            }
+        }
+    },
+    doSomethingIfOk: function () {
+        var i = 0,
+            len = this.subscriptions.length;
+
+        // Iterate through the subscriptions and determine
+        // whether the status has changed to ok on each of them,
+        // and do something for each subscription that has
+        for (; i < len; i++) {
+            if (this.subscriptions[i].getStatus() === "ok") {
+                // Do something because the status of the
+                // observable is what we want it to be
+            }
+        }
+    }
+}
+
+var observer = new Observer(),
+    observable = new Observable();
+observer.subscribeTo(observable);
+
+// Nothing will happen because the status hasn't changed
+observer.doSomethingIfOk();
+
+// Change the status to "ok" so now something will happen
+observable.status = "ok";
+observer.doSomethingIfOk();
+
+</script>
+
+<select name="country" id="country">
+    <option value="01">01</option>
+    <option value="02">02</option>
+    <option value="03">03</option>
+    <option value="04">04</option>
+    <option value="05">05</option>
+</select>
+<select name="province" id="province">
+    <option value="001">001</option>
+    <option value="002">002</option>
+    <option value="003">003</option>
+    <option value="004">004</option>
+    <option value="005">005</option>
+</select>
+<select name="city" id="city">
+    <option value="0001">0001</option>
+    <option value="0002">0002</option>
+    <option value="0003">0003</option>
+    <option value="0004">0004</option>
+    <option value="0005">0005</option>
+</select>
+
+<script>
+    (function () {
+        // 观察者模式和中介者模式组合使用
+
+        var Mediator = {
+            changed: function (colleague) {
+                switch (colleague.element.id) {
+                    case 'country':
+                        this.logProvinceChange();
+                        break;
+                    case 'province':
+                        this.logCityChange();
+                        break;
+                }
+            },
+            logProvinceChange: function () {
+                console.log('省份联动了，当前值为' + this.province.element.value);
+            },
+            logCityChange: function () {
+                console.log('市联动了，当前值为' + this.city.element.value);
+            }
+        };
+
+        function CountrySelect(element, mediator) {
+            this.observers = [];
+            this.element = element;
+            this.mediator = mediator;
+            var me = this;
+            this.element.addEventListener('change', function (e) {
+                me.notifyObservers();
+            }, false);
+        }
+
+        CountrySelect.prototype = {
+            attach: function (observer) {
+                this.observers.push(observer);
+            },
+            detach: function (observer) {
+                for (var i = 0, len = this.observers.length; i < len; i++) {
+                    if (observer === this.observers[i]) {
+                        this.observers.splice(i, 1);
+                        return;
+                    }
+                }
+            },
+            notifyObservers: function () {
+                for (var i = 0, len = this.observers.length; i < len; i++) {
+                    this.observers[i].update(this);
+                }
+
+                this.mediator.changed(this);
+            }
+        };
+
+        function ProvinceSelect(element, mediator) {
+            this.observers = [];
+            this.element = element;
+            this.mediator = mediator;
+            var me = this;
+            this.element.addEventListener('change', function (e) {
+                me.notifyObservers();
+            }, false);
+        }
+
+        ProvinceSelect.prototype = {
+            attach: function (observer) {
+                this.observers.push(observer);
+            },
+            detach: function (observer) {
+                for (var i = 0, len = this.observers.length; i < len; i++) {
+                    if (observer === this.observers[i]) {
+                        this.observers.splice(i, 1);
+                        return;
+                    }
+                }
+            },
+            notifyObservers: function () {
+                for (var i = 0, len = this.observers.length; i < len; i++) {
+                    this.observers[i].update(this);
+                }
+
+                this.mediator.changed(this);
+            },
+
+            update: function (subject) {
+                var index = parseInt(subject.element.value, 10) - 1;
+                this.element.selectedIndex = index;
+
+                this.notifyObservers();
+            }
+        };
+
+        function CitySelect(element) {
+            this.element = element;
+        }
+
+        CitySelect.prototype = {
+            update: function (subject) {
+                var index = parseInt(subject.element.value, 10) - 1;
+                this.element.selectedIndex = index;
+            }
+        };
+
+        var country = new CountrySelect(document.getElementById('country'), Mediator);
+        var province = new ProvinceSelect(document.getElementById('province'), Mediator);
+        var city = new CitySelect(document.getElementById('city'));
+
+        Mediator.province = province;
+        Mediator.city = city;
+
+        country.attach(province);
+        province.attach(city);
+    }());
+</script>
+</body>
+</html>

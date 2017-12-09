@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8">
+</head>
+<body>
+<script>
+/**
+ * 适配器模式
+ *
+ * 定义：
+ * 将一个类的接口转换成客户希望的另外一个接口。适配器模式使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。
+ *
+ * 本质：
+ * 转换匹配，复用功能
+ *
+ * 适配器模式可用来在现有接口和不兼容的类之间进行适配。使用这种模式的对象又叫包装器，因为它们是在用一个新的接口包装另一个对象。许多时候创建适配器对程序员和接口的设计人员都有好处。在设计类的时候往往会遇到有些接口不能与现有API一同使用的情况。借助于适配器，你不用直接修改这些类也能使用它们。在设计大型系统和遗留框架的情况下，他的优点往往比缺点更突出。
+ *
+ * 适配器的特点
+ *
+ * 适配器可以被添加到现有代码中以协调两个不同的接口。如果现有代码的接口能很好地满足需要，那就可能没有必要使用适配器。但要是现有接口对于手头的工作来说不够直观或实用，那么可以使用适配器来提供一个更简洁或更丰富的接口。
+ * 从表面上看，适配器模式很像门面模式。它们都要对别的对象进行包装并改变其呈现的接口。二者的差别在于它们如何改变接口。门面元素展现的是一个简化的接口，它并不提供额外的选择，而且有时为了方便完成常见任务它还会做出一些假定。而适配器则要把一个接口转换为另一个接口，它并不会滤除某些能力，也不会简化接口。如果客户系统期待的API不可用，那就需要用到适配器。
+ *
+ * 应用适配器模式来解决问题的思路
+ * 一般问题的根源在于接口的不兼容，功能是基本实现了，也就是说，只要让两边的接口匹配起来，就可以复用第一版的功能了。
+ * 按照适配器模式的实现方式，可以定义一个类来实现第二版的接口，然后在内部实现的时候，转调第一版已经实现了的功能，这样就可以通过对象组合的方式，既复用了第一版已有的功能，同时又在接口上满足了第二版调用的需求，
+ */
+
+// 例子
+// 已经存在的接口，这个接口需要被适配
+var Adaptee = function(){};
+Adaptee.prototype.specificRequest = function(){
+    // 具体功能实现
+};
+
+// 适配器
+// 构造器，传入需要被适配的对象
+var Adapter = function(adaptee){
+    this.adaptee = adaptee;
+};
+Adapter.prototype = {
+    request: function(){
+        // do sth
+        // 可能转调已经实现了的方法，进行适配
+        this.adaptee.specificRequest();
+        // other thing
+    }
+};
+
+var adaptee = new Adaptee();
+var target = new Adapter(adaptee);
+target.request();
+
+/*
+Adaptee和Target的关系
+
+适配器模式中被适配的接口Adaptee和适配成为的接口Target是没有关联的，也就是说，Adaptee和Target中的方法既可以相同，也可以不同。极端情况下两个接口里面的方法可能是完全不同的，也可能完全相同。
+
+对象组合
+
+适配器的实现方式其实是依靠对象组合的方式。通过给适配器对象组合被适配的对象，然后当客户端调用Target的时候，适配器会把相应的功能委托给被适配对象去完成。
+
+适配器模式的调用顺序
+
+target--Adapter--Adaptee
+ */
+
+/*
+适配器的常见实现
+
+在实现适配器的时候，适配器通常是一个类，一般会让适配器类去实现Target接口，然后在适配器的具体实现里面调用Adaptee。也就是说适配器通常是一个Target类型，而不是Adaptee类型。
+
+智能适配器
+
+适配器也可以实现一些Adaptee没有实现，但是在Target中定义的的功能。这种情况就需要在适配器的实现里面，加入新功能的实现。这种适配器被称为智能适配器
+如果要使用智能适配器，一般新加入功能的实现会用到很多Adaptee的功能，相当于利用Adaptee的功能来实现更高层的功能。当然也可以完全实现新加入的功能，和已有的功能都不相关，变相地扩展了功能。
+
+适配多个Adaptee
+
+适配器在适配的时候，可以适配多个Adaptee，也就是说实现某个新的Target的功能的时候，需要调用多个模块的功能，适配多个模块的功能才能满足新接口的要求。
+
+适配器Adapter实现的复杂程度
+
+取决于Target和Adaptee的相似程度。
+
+缺省适配
+
+为一个接口提供缺省实现。有了它，就不用直接去实现接口，而是采用集成这个缺省适配对象，从而让子类可以有选择地去覆盖实现需要的方法，对于不需要的方法，使用缺省适配的方法就可以了。
+
+双向适配器
+
+适配器也可以实现双向的适配，既可以把Adaptee适配成为Target，也可以把Target适配成为Adaptee。也就是说这个适配器可以同时当作Target和Adaptee使用。
+在两个不同的客户需要用不用的方式查看同一个对象时，适合使用双向适配器。
+
+ */
+
+/*
+对象适配器的实现： 依赖于对象的组合。。
+
+类适配器的实现： 采用多重继承对一个接口与另一个接口进行适配。
+ */
+
+/*
+ 如果你有一个具有3个字符串参数的函数，但客户系统拥有的却是一个包含三个字符串元素的对象或数组，此时就可以用一个是配起来衔接二者。
+ */
+var clientObject = {
+    string1: 'foo',
+    string2: 'bar',
+    string3: 'baz'
+};
+function interfaceMethod(str1, str2, str3) {
+    //...
+}
+// 适配器
+function clientToInterfaceAdapter(o) {
+    interfaceMethod(o.string1, o.string2, o.string3);
+}
+clientToInterfaceAdapter(clientObject);
+
+
+/*
+ 适配原有实现
+
+ 在某些情况下，从客户一方对代码进行修改是不可能的。有些程序员因此索性避免创建API。如果现有接口发生了改变，那么客户代码也必须进行相应的修改后才能使用这个新接口，否则整个应用系统就有失灵的危险。在引入新接口之后，一般说来最好向客户方提供一些可为其实现新接口的适配器。
+ */
+
+// 示例：适配两个库
+// 下面的例子要实现的是从Prototype库的$函数到YUI的get方法的转换
+// 先看看他们在接口方面的差异
+
+// Prototype $ function
+function $() {
+    var elements = [];
+    for (var i = 0; i < arguments.length; i++) {
+        var element = arguments[i];
+        if (typeof element === 'string') {
+            element = document.getElementById(element);
+        }
+        if (arguments.length === 1) {
+            return element;
+        }
+        elements.push(element);
+    }
+    return elements;
+}
+
+// YUI get method
+YAHOO.util.Dom.get = function (el) {
+    if (YAHOO.lang.isString(el)) {
+        return document.getElementById(el);
+    }
+    if (YAHOO.lang.isArray(el)) {
+        var c = [];
+        for (var i = 0, len = el.length; i < len; ++i) {
+            c[c.length] = YAHOO.util.Dom.get(el[i]);
+        }
+        return c;
+    }
+    if (el) {
+        return el;
+    }
+    return null;
+};
+
+// Adapter
+function PrototypeToYUIAdapter() {
+    return YAHOO.util.Dom.get(arguments);
+}
+function YUIToPrototypeAdapter(el) {
+    return $.apply(window, el instanceof Array ? el : [el]);
+}
+
+// 有了这些适配器，现有的客户系统就可以继续使用其熟悉的API。
+$ = PrototypeToYUIAdapter;
+// or
+YAHOO.util.Dom.get = YUIToPrototypeAdapter;
+
+
+// 示例：适配电子邮件API
+/*
+ 本例研究的是一个web邮件API，它可以用来接收，发送邮件并执行一些别的任务。我们将采用类Ajax技术从服务器或取消息，然后将消息详情载入DOM。
+ */
+/*
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Mail API Demonstration</title>
+ <meta charset="utf-8">
+ <style>
+ body {
+ font: 62.5% georgia, times, serif;
+ }
+ #doc {
+ margin: 0 auto;
+ width: 500px;
+ font-size: 1.3em;
+ }
+ </style>
+ </head>
+ <body>
+ <div id="doc">
+ <h1>Email Application Interface</h1>
+ <ul>
+ <li><a class="thread" id="msg-1" href="#">load message Sister Sonya</a></li>
+ <li><a class="thread" id="msg-2" href="#">load message Lindsey Simon</a></li>
+ <li><a class="thread" id="msg-3" href="#">load message Margaret Stoooart</a></li>
+ </ul>
+ <div id="message-pane"></div>
+ </div>
+
+ <script src="Library.js"></ script>
+ < script>
+ */
+// application utilities
+var DED = {};
+DED.util = {
+    substitute: function (s, o) {
+        return s.replace(/\{([^\{\}]*)\}/g, function (a, b) {
+            var r = o[b];
+            return typeof r === 'string' || typeof r === 'number' ? r : a;
+        });
+    },
+    asyncRequest: (function () {
+        function handleReadyState(o, callback) {
+            o.onreadystatechange = function () {
+                if (o && o.readyState === 4) {
+                    if ((o.status >= 200 && o.status < 300) || o.status === 304) {
+                        if (callback) {
+                            callback(o);
+                        }
+                    }
+                }
+            };
+        }
+
+        var getXHR = function () {
+            var http;
+            try {
+                http = new XMLHttpRequest();
+                getXHR = function () {
+                    return new XMLHttpRequest();
+                };
+            } catch (ex) {
+                var msxml = [
+                    'MSXML2.XMLHTTP.3.0',
+                    'MSXML2.XMLHTTP',
+                    'Microsoft.XMLHTTP'
+                ];
+                for (var i = 0, len = msxml.length; i < len; i++) {
+                    try {
+                        http = new ActiveXObject(msxml[i]);
+                        getXHR = function () {
+                            return new ActiveXObject(getXHR.str);
+                        };
+                        getXHR.str = msxml[i];
+                    } catch (ex) {
+                    }
+                }
+            }
+            return http;
+        };
+
+        return function (method, url, callback, postData) {
+            var http = getXHR();
+            http.open(method, url, true);
+            handleReadyState(http, callback);
+            http.send(postData || null);
+            return http;
+        };
+    })()
+};
+
+// dedMail application interface
+var dedMail = (function () {
+    function request(id, type, callback) {
+        DED.util.asyncRequest(
+                'GET',
+                'mail-api.php?ajax=true&id=' + id + '&type=' + type,
+                function (o) {
+                    callback(o.responseText);
+                }
+        );
+    }
+
+    return {
+        getMail: function (id, callback) {
+            request(id, 'all', callback);
+        },
+        sendMail: function (body, recipient) {
+            // Send mail with body text to the supplied recipient
+        },
+        save: function (id) {
+            // Save a draft copy with the supplied email ID.
+        },
+        move: function (id, destination) {
+            // Move the email to the supplied destination folder.
+        },
+        archive: function (id) {
+            // Archive the email.This can be a basic facade method that uses
+            // the move method, hard-coding the destination.
+        },
+        trash: function (id) {
+            // This can also be a facade method which moves the message to
+            // the trash folder.
+        },
+        reportSpam: function (id) {
+            // Move message to spam folder and add sender to the blacklist.
+        },
+        formatMessage: function (e) {
+            var e = e || window.event;
+            if (e.preventDefault) {
+                e.preventDefault();
+            } else {
+                e.returnValue = false;
+            }
+            var targetEl = e.target || e.srcElement;
+            var id = targetEl.id.toString().split('-')[1];
+            dedMail.getMail(id, function (msgObject) {
+                var resp = eval('(' + msgObject + ')');
+                var details = '<p><strong>From:</strong> {from}<br>';
+                details += '<strong>Sent:</strong> {date}</p>';
+                details += '<p><strong>Message:</strong><br>';
+                details += '{message}</p>';
+                $('message-pane').innerHTML = DED.util.substitute(details, resp);
+            });
+        }
+    };
+})();
+
+// Set up mail implementation
+addEvent(window, 'load', function () {
+    var threads = getElementsByClass('thread', document, 'a');
+    for (var i = 0, len = threads.length; i < len; i++) {
+        addEvent(threads[i], 'click', dedMail.formatMessage);
+    }
+});
+/*
+ </ script>
+ </body>
+ </html>
+ */
+/**
+ * 从fooMail转向dedMail
+ */
+// 先来看一段使用fooMail这个API的代码，该方法以一个回调方法为参数
+fooMail.getMail(function (text) {
+    $('message-oane').innerHTML = text;
+});
+
+// 适配器
+var dedMailtoFooMailAdapter = {};
+dedMailtoFooMailAdapter.getMail = function (id, callback) {
+    dedMail.getMail(id, function (resp) {
+        resp = eval('(' + resp + ')');
+        var details = '<p><strong>From:</strong> {from}<br>';
+        details += '<strong>Sent:</strong> {data}</p>';
+        callback(DED.util.substitute(details, resp));
+    });
+};
+// Other methods needed to adapter dedMail to the fooMail interface.
+//...
+
+// Assign the adapter to the fooMail variable.
+fooMail = dedMailtoFooMailAdapter;
+
+
+/*
+ 适配器模式的适用场合
+
+ 适配器适用于客户系统期待的接口与现有API提供的接口不兼容这种场合。它只能用来协调语法上的差异问题。适配器所适配的两个方法执行的应该是类似的任务，否则的话它就解决不了问题。就像桥接元素和门面元素一样，通过创建适配器，可以把抽象与其实现隔离开来，以便二者独立变化。
+ */
+
+/*
+ 适配器之利
+
+ 适配器有助于避免大规模改写现有客户的代码。其工作机制是，用一个新的接口对现有类的接口进行包装。
+
+ 适配器之弊
+
+ 可能有些工程师不想使用适配器，其原因主要在于他们实际上需要彻底重写代码。有人认为适配器是一种不必要的开销，完全可以通过重写现有代码避免。此外适配器模式也会引入一批需要支持的新工具。如果现有API还未定形，捉着新接口还未定形，那么适配器可能不会一直管用。
+ */
+
+// http://www.joezimjs.com/javascript/javascript-design-patterns-adapter/
+var AjaxLogger = {
+    sendLog: function() {
+        var data = this.urlEncode(arguments);
+
+        jQuery.ajax({
+            url: "http://example.com/log",
+            data: data
+        });
+    },
+
+    urlEncode: function(arg) {
+        //…
+        return encodedData;
+    }
+    //…
+};
+
+var AjaxLoggerAdapter = {
+    log: function(arg) {
+        AjaxLogger.sendLog(arg);
+    }
+};
+
+/* Adjust the LoggerFactory */
+
+var LoggerFactory = {
+    getLogger: function() {
+        // just gotta change what's returned here
+        return AjaxLoggerAdapter;
+    }
+    //…
+};
+
+
+/*
+相关模式
+
+适配器模式与桥接模式
+
+其实这两个模式除了结构略为相似外，功能上完全不同。
+适配器模式是把两个或者多个接口的功能进行转换匹配；而桥接模式是让接口和实现部分相分离，以便它们可以相对于独立地变化。
+
+适配器模式与装饰模式
+
+适配器模式能模拟实现简单的装饰模式的功能，也就是为已有功能增添功能。
+两个模式有一个很大的不同：一般适配器适配过后是需要改变接口的，如果不改接口就没有必要适配了；而装饰模式是不改变接口的，无论多少层装饰都是一个接口。因此装饰模式可以很容易地支持递归组合，而适配器就做不到，每次的接口不同，无法递归。
+
+适配器模式与代理模式
+
+适配器模式可以和代理模式组合使用。在实现适配器的时候，可以通过代理来调用Adaptee，这样可以获得更大的灵活性。
+
+适配器模式与抽线工厂模式
+
+在适配器实现的时候，通常需要得到被适配的对象。如果被适配的是一个接口，那么就可以结合一些可以创造对象实例的设计模式，来得到被适配的对象实例，比如抽象工厂模式，单例模式，工厂方法模式等。
+
+ */
+
+
+// http://www.dofactory.com/javascript-adapter-pattern.aspx
+
+(function(){
+    // old interface
+function Shipping() {
+    this.request = function(zipStart, zipEnd, weight) {
+        // ...
+        return "$49.75";
+    }
+}
+
+// new interface
+function AdvancedShipping() {
+    this.login = function(credentials) { /* ... */ };
+    this.setStart = function(start) { /* ... */ };
+    this.setDestination = function(destination) { /* ... */ };
+    this.calculate = function(weight) { return "$39.50"; };
+}
+
+// adapter interface
+function ShippingAdapter(credentials) {
+    var shipping = new AdvancedShipping();
+    shipping.login(credentials);
+
+    return {
+        request: function(zipStart, zipEnd, weight) {
+            shipping.setStart(zipStart);
+            shipping.setDestination(zipEnd);
+            return shipping.calculate(weight);
+        }
+    };
+}
+
+// log helper
+var log = (function () {
+    var log = "";
+    return {
+        add: function (msg) { log += msg + "\n"; },
+        show: function () { alert(log); log = ""; }
+    }
+})();
+
+
+function run() {
+
+    var shipping = new Shipping();
+
+    var credentials = {token: "30a8-6ee1"};
+    var adapter = new ShippingAdapter(credentials);
+
+    // original shipping object and interface
+    var cost = shipping.request("78701", "10010", "2 lbs");
+    log.add("Old cost: " + cost);
+
+    // new shipping object with adapted interface
+    cost = adapter.request("78701", "10010", "2 lbs");
+    log.add("New cost: " + cost);
+
+    log.show();
+}
+}());
+
+</script>
+</body>
+</html>

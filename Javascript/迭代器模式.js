@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>迭代器模式</title>
+</head>
+<body>
+    
+<script>
+/**
+ * 迭代器模式
+ *
+ * 定义：
+ * 提供一种方法顺序访问一个聚合对象中各个元素，而又不需要暴露该对象的内部表示。
+ *
+ * 本质：
+ * 控制访问聚合对象中的元素
+ *
+ * 所谓聚合是指一组对象的组合结构。
+ *
+ * 一.功能
+ * 迭代器模式的功能主要在于提供对聚合对象的迭代访问。迭代器就围绕着这个“访问”做文章，延伸出很多的功能。比如：
+ * 1.以不同的方式遍历聚合对象，比如向前，向后等。
+ * 2.对同一个聚合同时进行多个遍历。
+ * 3.以不同的遍历策略来遍历聚合，比如是否需要过滤等。
+ * 4.多态迭代，含义是：为不同的聚合结构提供统一的迭代接口，也就是说通过一个迭代接口可以访问不同的聚合结构，这就叫做多态迭代。事实上，标准的迭代模式实现基本上都是支持多态迭代的
+ *
+ * 二，关键思想
+ * 聚合对象的类型很多，如果对聚合对象的迭代访问跟聚合对象本身融合在一起的话，会严重影响到聚合对象的可扩展性和可维护性。
+ * 因此迭代器模式的关键思想就是把对聚合对象的遍历和访问从聚合对象中分离出来，放入单独的迭代器中。这样聚合对象会变得简单一些，而且迭代器和聚合对象可以独立地变化和发展，会大大加强系统的灵活性。
+ *
+ * 三，内部迭代器和外部迭代器
+ * 所谓内部迭代器，指的是由迭代器自己来控制迭代下一个元素的步骤，客户端无法干预。因此，如果想要在迭代的过程中完成工作的话，客户端就需要把操作传递给迭代器。迭代器在迭代的时候会在每个元素上执行这个操作，即回调。
+ * 所谓外部迭代，指的是客户端来控制迭代下一个元素的步骤，客户端必须显式地调用next来迭代下一个元素。
+ * 总体来说外部迭代器比内部迭代器更灵活一些。
+ */
+
+// 示例代码
+
+(function(){
+/**
+ * 迭代器实现对象，示意的是聚合对象为数组的迭代器
+ * 不同聚合对象相应的迭代器实现是不一样的
+ * @param {Array} aggregate [聚合对象]
+ */
+var Iterator = function(aggregate){
+    this.aggregate = aggregate;
+    // 当前索引位置
+    this.index = -1;
+};
+Iterator.prototype = {
+    first: function(){
+        this.index = 0;
+    },
+    next: function(){
+        if(this.index < this.aggregate.size()) {
+            this.index++;
+        }
+    },
+    isDone: function(){
+        return this.index === this.aggregate.size();
+    },
+    currentItem: function(){
+        return this.aggregate.get(this.index);
+    }
+};
+
+var Aggregate = function(ss){
+    this.ss = ss;
+};
+Aggregate.prototype = {
+    createIterator: function(){
+        return new Iterator(this);
+    },
+    get: function(index){
+        var retObj = null;
+        if(index < this.ss.length) {
+            retObj = this.ss[index];
+        }
+
+        return retObj;
+    },
+    size: function(){
+        return this.ss.length;
+    }
+};
+
+new function(){
+    var names = ['张三', '李四', '王五'];
+    var aggregate = new Aggregate(names);
+    var it = aggregate.createIterator();
+    var obj;
+
+    it.first();
+    while(!it.isDone()) {
+        obj = it.currentItem();
+        console.log('the obj === ' + obj);
+        it.next();
+    }
+}();
+
+}());
+
+(function(){
+    // 实现实例
+    
+    // 工资表数据的整合
+    /*
+    项目的客户方收购了一家小公司，这家小公司有自己的工资系统，现在需要整合到客户方已有的工资系统中。
+    两方的工资系统数据结构可能不同，但用来描述工资的数据模型是差不多的。
+     */
+    
+    var Iterator = function(aggregate){
+        this.aggregate = aggregate;
+        this.index = -1;
+    };
+    Iterator.prototype = {
+        first: function(){
+            this.index = 0;
+        },
+        next: function(){
+            if(this.index < this.aggregate.size()) {
+                this.index++;
+            }
+        },
+        isDone: function(){
+            return this.index === this.aggregate.size();
+        },
+        currentItem: function(){
+            return this.aggregate.get(this.index);
+        }
+    };
+
+
+    // 工资描述模型对象
+    var PayModel = function(){
+        // 支付工资的人员
+        this.userName;
+        // 支付的工资数额
+        this.pay;
+    };
+    PayModel.prototype = {
+        getUserName: function(){
+            return this.userName;
+        },
+        setUserName: function(userName){
+            this.userName = userName;
+        },
+        getPay: function(){
+            return this.pay;
+        },
+        setPay: function(pay){
+            this.pay = pay;
+        },
+        toString: function(){
+            return 'userName = ' + this.userName + ', pay = ' + this.pay;
+        }
+    };
+
+    // 客户方已有的工资管理对象
+    var PayManager = function(){
+        this.list = [];
+    };
+    PayManager.prototype = {
+        createIterator: function(){
+            return new iterator(this);
+        },
+        get: function(index){
+            var ret = null;
+            if(index < this.list.length) {
+                ret = this.list[index];
+            }
+
+            return ret;
+        },
+        size: function(){
+            return this.list.length;
+        },
+
+        // 计算工资，其实应该有很多参数，为了演示从简
+        calcPay: function(){
+            var pm1 = new PayModel();
+            pm1.setPay(3800);
+            pm1.setUserName('张三');
+
+            var pm2 = new PayModel();
+            pm2.setPay(5800);
+            pm2.setUserName('李四');
+
+            this.list.push(pm1);
+            this.list.push(pm2);
+        }
+    };
+
+    // 被客户方收购的那个公司的工资管理类
+    var SalaryManager = function(){
+        this.pms = [];
+    };
+    SalaryManager.prototype = {
+        // 获取工资列表
+        getPays: function(){
+            return this.pms;
+        },
+        // 计算工资
+        calcSalary: function(){
+            var pm1 = new PayModel();
+            pm1.setPay(2200);
+            pm1.setUserName('王五');
+
+            var pm2 = new PayModel();
+            pm2.setPay(3600);
+            pm2.setUserName('赵六');
+
+            this.pms.push(pm1);
+            this.pms.push(pm2);
+        }
+    };
+
+    new function(){
+        var payManager = new PayManager();
+        payManager.calcPay();
+        var it = payManager.createIterator();
+        console.log('集团工资列表：');
+        var pm;
+        it.first();
+        while(!it.isDone()){
+            pm = it.currentItem();
+            console.log('ths obj === ' + pm);
+            it.next();
+        }
+
+        var salaryManager = new SalaryManager();
+        salaryManager.calcSalary();
+        var pms = salaryManager.getPays();
+        console.log('新收购的公司工资列表：');
+        for(var i = 0; i < pms.length; i++) {
+            console.log(pms[i]);
+        }
+    }();
+
+}());
+
+(function(){
+    // 带迭代策略的迭代器示例
+    /*
+    在实现过滤功能的迭代器中，又有两种常见的需要过滤的情况，一种是对数据进行整条过滤，比如只能查看自己部门的数据；另外一种情况是数据进行部分过滤，比如某些人不能查看工资数据。
+    带迭代策略的迭代器实现的一个基本思路，就是先把聚合对象的聚合数据获取到，并存储到迭代器中，这样迭代器就可以按照不同的策略来迭代数据了。
+     */
+    var Iterator = function(aggregate){
+        this.pms = [];
+        this.index = 0;
+
+        // 在这里先对聚合对象的数据进行过滤
+        var tempCol = [];
+        var i;
+        for(i in aggregate) {
+            if(!aggregate.hasOwnProperty(i)) continue;
+
+            if(aggregate[i].getPay() < 3000) {
+                tempCol.push(aggregate[i]);
+            }
+        }
+
+        this.pms = [];
+        for(i = 0; i < tempCol.length; i++) {
+            this.pms[i] = tempCol[i];
+        }
+    };
+    Iterator.prototype = {
+        hasNext: function(){
+            return this.index <= (this.pms.length - 1);
+        },
+        next: function(){
+            var ret = null;
+            if(this.hasNext()) {
+                ret = this.pms[this.index++];
+            }
+
+            // 在这里对要返回的数据进行过滤，比如不让查看工资数据
+            if(ret) ret.setPay(0.0);
+
+            return ret;
+        },
+        remove: function(){}
+    };
+
+/*
+谁定义遍历算法的问题
+
+在迭代器模式的实现中，常见的有两个地方可以来定义遍历算法，一个是聚合对象本身，另外一个就是迭代器负责遍历算法。
+
+在聚合对象本身定义遍历算法，通常会在遍历过程中，用迭代器来存储当前迭代的状态这种迭代器被称为游标，因为它仅用来指示当前的位置。
+
+在迭代器中定义遍历算法，会比在相同的聚合上使用不同的迭代器算法容易，同事也易于在不同的聚合上重用相同的算法。比如上面带策略的迭代器示例，迭代器把需要迭代的数据从聚合对象中取出并存放到自己的对象中，然后再迭代自己的数据，除了刚开始创建迭代器的时候需要访问聚合对象外，真正的迭代过程已经跟聚合对象无关了。
+
+
+迭代器健壮程度如何
+在遍历一个聚合的同时更改这个聚合可能是危险的。如果在遍历的时候增加或删除该聚合元素，可能会导致两次访问同一个元素或者遗漏掉某个元素。一个简单的解决办法是拷贝该聚合，并对该拷贝实施遍历，但一般来说代价太高。
+
+一个健壮的迭代器保证插入和删除不会干扰遍历，且不需要拷贝该聚合。有许多方法来实现健壮的迭代器。其中大多数需要向这个聚合注册该迭代器。当插入或删除时，该聚合要么调整迭代器的内部状态，要么在内部的维护额外的信息以保证正确的遍历。
+
+空迭代器
+一个空迭代器是一个退化的迭代器，它有助于处理边界条件。一个NullIterator总是已经完成了遍历。例如：叶节点元素返回NullIterator的一个实例。
+
+ */
+
+/*
+双向迭代器
+
+可以同时向前和向后遍历数据的迭代器。
+ */
+
+}());
+
+/**
+ * 迭代器模式的优点
+ *
+ * 1.更好的封装性
+ * 2.迭代器模式可以让你访问一个聚合对象的内容，而无需暴露该聚合对象的内部表示，从而提高聚合对象的封装性。
+ * 3.可以以不同的遍历方式来遍历一个聚合。
+ * 4.使用迭代器模式，使得聚合对象的内容和具体的迭代算法分离开。这样就可以通过使用不同的迭代器的实例，不同的遍历方式来遍历一个聚合对象了。
+ * 5.迭代器简化了聚合的接口。
+ * 6.简化客户端调用
+ * 7.同一个聚合上可以有多个遍历。
+ * 8.每个迭代器保持它自己的遍历状态。
+ *
+ *
+ * 何时选用迭代器模式
+ *
+ * 1.如果你希望提供访问一个聚合对象的内容，但是又不想暴露它的内部表示的时候。
+ * 2.如果你希望有多种遍历方式可以访问聚合对象，可以使用迭代器模式。
+ * 3.如果你希望为遍历不同的聚合对象提供一个统一的接口。
+ *
+ *
+ * 相关模式
+ *
+ * 迭代器模式和组合模式
+ *
+ * 这两个模式可以组合使用。
+ * 组合模式是一种递归的对象结构，在枚举某个组合对象的子对象的时候，通常会使用迭代器模式。
+ *
+ * 迭代器模式和工厂方法模式
+ * 
+ * 这两个模式可以组合使用。
+ * 在聚合对象创建迭代器的时候，通常会采用工厂方法模式来实例化相应的迭代器对象。
+ *
+ * 备忘模式
+ * 可使用memento来捕获一个迭代的状态。迭代器在其内部存储memento
+ */
+
+// 翻页迭代
+ (function(){
+    
+    // 顺序翻页迭代其示例
+    
+    // 工资描述模型对象
+    var PayModel = function(){
+        // 支付工资的人员
+        this.userName;
+        // 支付的工资数额
+        this.pay;
+    };
+    PayModel.prototype = {
+        getUserName: function(){
+            return this.userName;
+        },
+        setUserName: function(userName){
+            this.userName = userName;
+        },
+        getPay: function(){
+            return this.pay;
+        },
+        setPay: function(pay){
+            this.pay = pay;
+        },
+        toString: function(){
+            return 'userName = ' + this.userName + ', pay = ' + this.pay;
+        }
+    };
+
+    var SalaryManager = function(){
+        this.pms = [];
+    };
+    SalaryManager.prototype = {
+        getPays: function(){
+            return this.pms;
+        },
+        calcSalary: function(){
+            var pm1 = new PayModel();
+            pm1.setPay(2200);
+            pm1.setUserName('王五');
+
+            var pm2 = new PayModel();
+            pm2.setPay(3600);
+            pm2.setUserName('赵六');
+
+            var pm3 = new PayModel();
+            pm3.setPay(2200);
+            pm3.setUserName('王五二号');
+
+            var pm4 = new PayModel();
+            pm4.setPay(3600);
+            pm4.setUserName('赵六二号');
+
+            var pm5 = new PayModel();
+            pm5.setPay(2200);
+            pm5.setUserName('王五三号');
+
+            this.pms.push(pm1);
+            this.pms.push(pm2);
+            this.pms.push(pm3);
+            this.pms.push(pm4);
+            this.pms.push(pm5);
+        },
+        // Factory Method
+        createIterator: function(type){
+            if(type === 'random') {
+                return new RandomIterator(this);
+            }
+            return new Iterator(this);
+        }
+    };
+
+    // 双向迭代器
+    var Iterator = function(aggregate){
+        this.pms = aggregate.getPays();
+        this.index = 0;
+    };
+    Iterator.prototype = {
+        hasNext: function(){
+            return this.index <= (this.pms.length - 1);
+        },
+        hasPrevious: function(){
+            return this.index > 0;
+        },
+        // 返回当前索引到num的集合
+        next: function(num){
+            var col = [];
+            var count = 0;
+            while(this.hasNext() && count++ < num) {
+                col.push(this.pms[this.index++]);
+            }
+
+            return col;
+        },
+        // 把索引退回去num个，然后再取值。
+        // 事实上有可能有多退回去的数据
+        previous: function(num){
+            var col = [];
+            var count = 0;
+            this.index = num;
+            while(this.hasPrevious() && count++ < num) {
+                col.push(this.pms[this.index++]);
+            }
+
+            return col;
+        }
+    };
+
+    new function(){
+        var salaryManager = new SalaryManager();
+        salaryManager.calcSalary();
+        var it = salaryManager.createIterator();
+
+        // 获取第一页，每页显示两条
+        var col = it.next(2);
+        console.log('第一页数据：');
+        print(col);
+
+        var col2 = it.next(2);
+        console.log('第二页数据：');
+        print(col2);
+
+        var col3 = it.previous(2);
+        console.log('第三页数据：');
+        print(col3);
+
+        function print(col){
+            for(var i =0; i < col.length; i++) {
+                console.log(col[i]);
+            }
+        }
+    }();
+
+    // 随机翻页迭代器示例
+    
+    var RandomIterator = function(aggregate){
+        this.pms = aggregate.getPays();
+        this.index = 0;
+    };
+    RandomIterator.prototype = {
+        hasNext: function(){
+            return this.index <= (this.pms.length - 1);
+        },
+        hasPrevious: function(){
+            return this.index > 0;
+        },
+        getPage: function(pageNum, pageShow){
+            var col = [];
+            // 需要在这里先计算需要获取的数据的开始条数和结束条数
+            var start = (pageNum - 1) * pageShow;
+            var end = start + pageShow - 1;
+
+            if(start < 0) start = 0;
+
+            if(end > this.pms.length - 1) end = this.pms.length - 1;
+
+            this.index = 0;
+            while(this.hasNext() && this.index <= end) {
+                if(this.index >= start) col.push(this.pms[this.index]);
+                this.index++;
+            }
+
+            return col;
+        }
+    };
+
+    new function(){
+        var salaryManager = new SalaryManager();
+        salaryManager.calcSalary();
+        var it = salaryManager.createIterator('random');
+
+        // 获取第一页，每页显示两条
+        var col = it.getPage(1, 2);
+        console.log('第一页数据：');
+        print(col);
+
+        var col2 = it.getPage(2, 2);
+        console.log('第二页数据：');
+        print(col2);
+
+        var col3 = it.getPage(1, 2);
+        console.log('再次获取第一页数据：');
+        print(col3);
+
+        var col4 = it.getPage(3, 2);
+        console.log('第三页数据：');
+        print(col4);
+
+        function print(col){
+            for(var i =0; i < col.length; i++) {
+                console.log(col[i]);
+            }
+        }
+
+    }();
+ }());
+
+(function(){
+    /**
+     * ECMAScript 6的Iterator--------------Generators
+     *
+     * 迭代器模式是很常用的设计模式，但是实现起来，很多东西是程序化的；当迭代规则比较复杂时，维护迭代器内的状态，是比较麻烦的。 于是有了generator，何为generator，这里 说的很明确: Generators: a better way to build Iterators.就是实现迭代器的更好的方式，借助 yield 关键字,可以更优雅的实现fib数列。
+     */
+
+    // 最简单的yield用法
+    // 创建一个generatorFunction
+    function* Hello() {
+        yield 1;
+        yield 2;
+    }
+
+    /**
+     * function* Hello() { // 我习惯用大驼峰命名因为这就好比generator的构造函数 yield 1; yield 2; }
+        arguments: null
+        caller: null
+        length: 0
+        name: "Hello"
+        prototype: GeneratorFunctionPrototype
+            __proto__: GeneratorFunctionPrototype
+                constructor: function GeneratorFunctionPrototype() { [native code] }
+                next: function next() { [native code] }
+                throw: function throw() { [native code] }
+                __proto__: Object
+         __proto__: function GeneratorFunctionPrototype() { [native code] }
+        < function scope >
+     */
+
+    var hello = Hello(); // hello 是一个generator
+    var a = hello.next(); // a: Object {value: 1, done: false}
+    var b = hello.next(); // b: Object {value: 2, done: false}
+    var c = hello.next(); // c: Object {value: undefined, done: true}
+    hello.next();   // Error: Generator has already finished
+
+    /*
+    以看到hello的原型链中总是有一个next函数, 每次运行都返回yield后面的值, 只是不是单纯的yield后面的值, 而是放在一个对象的value键中, 同时我们注意到对象中还有另一个键done, Hello函数中有两个yield, 因此前两个done的值为false, 表示我还没有结束呐!, 最后一个done为true, 表示我已经结束了! 如果继续运行hello.next()则会报错Uncaught Error: Generator has already finished
+
+很明显的说yield就是相当于是另一种return, return使用时函数就结束了, 而使用yield的时候, 函数会卡在那个yield的地方, 等待下一个next
+    */
+
+    // fib示例
+
+    // before
+    function fib(){
+        return {
+            state :0,
+            cur :0,
+            prev1:-1,
+            prev2:-1,
+            hasNext:function(){
+                return true;
+            },
+            //fib数列，第一个是0，第二个是1，后面就是统一的迭代公式了
+            next:function(){
+                if(this.state == 0){
+                    this.cur = 0;
+                    this.state = 1;
+                }else if(this.state == 1){
+                    this.cur = 1;
+                    this.prev2 = 0;
+                    this.state = 2;
+                }else{
+                    this.prev1 = this.prev2;
+                    this.prev2 = this.cur;
+                    this.cur = this.prev1 + this.prev2;
+                }
+                return this.cur;
+            }
+            //ignore reset funciton
+        }
+    }
+    //这是无限序列，所以改造了一下，只生成8个数
+    var fibIter = fib();
+    for(var i = 0; i < 8; i++){
+        console.log(fibIter.next());
+        if(fibIter.hasNext())
+            continue;
+    }
+
+    // after
+     function* fib2(){
+        yield 0;    // 状态0，第一次调用next，返回0，并改变状态
+        yield 1;    // 状态1，第二次调用next，返回1，并改变状态
+
+        var p1 = 0;
+        var p2 = 1;
+        var cur = p1 + p2;
+
+        while(true) {
+            yield cur;  // 状态2，后面调用next，返回相应的几个，状态不再改变
+
+            p1 = p2;
+            p2 = cur;
+            cur = p1 + p2;
+        }
+    }
+
+    var fibIter2 = fib2();
+    for(var i = 0; i < 8; i++){
+        console.log(fibIter2.next().value);
+    }
+    /*
+    0  1  1  2  3  5  8  13
+    */
+
+
+    // http://www.html-js.com/article/1716
+
+    (function(){
+        // 对从1到100的数组，先取出其中的所有偶数，然后再取出所有其中的前10个，
+        // 然后再计算其平方，然后转成数组。
+        function* wrap(arr){
+            for(var i = 0;i<arr.length;i++){
+                yield arr[i]; // ---（1）----
+            }
+        }
+
+        function iter(arr){
+            return new Iterator(arr);
+        }
+
+        function Iterator(arr){
+            this.gen = wrap(arr);
+        }
+
+        Iterator.prototype = {
+            where: function where(f){
+                var gen = whereImple(this.gen, f);
+                this.gen = gen;
+                return this;
+            },
+            map: function map(f){
+                var gen = mapImpl(this.gen, f);
+                this.gen = gen;
+                return this;
+            },
+            toArray: function toArray(){
+                var arr = [];
+                var _g;
+                var gen = this.gen;
+                while (true){
+                    _g = gen.next();
+                    if(_g.done) break;
+                    arr.push(_g.value);
+                }
+                return arr;
+            }
+        };
+
+        function* mapImpl(gen,f){
+            var _g;
+            while(true){
+                _g = gen.next();
+                if(_g.done) break;
+                yield f(_g.value);
+            }
+        }
+
+        function* whereImple(gen,f){
+            var index = 0, _g, value;
+            while(true){
+                _g = gen.next();
+                if(_g.done) break;
+                value = _g.value;
+                if(f(value,index++)){
+                    yield value;
+                }
+            }
+        }
+
+        var _1to10 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        var arr =iter(_1to10)
+                .where(function(v){return v % 2 == 0})
+                .map(function(v){return v * v})
+                .toArray();
+        console.log(arr); // [4, 16, 36, 64, 100]
+    }());
+
+    // http://bg.biedalian.com/2013/12/21/harmony-generator.html
+
+    // 代替回调金字塔
+
+    function delay(time) {
+        return function(fn) {
+            setTimeout(function() {
+                fn(null, time); // null 表示没有错误..
+            }, time)
+        }
+    }
+
+    function co(GenFunc) {
+        return function(cb) {
+            var gen = GenFunc();
+            void function next(err, args) {
+                if (err) {
+                    cb(err);
+                } else {
+                    if (gen.next) {
+                        var ret = gen.next(args);
+                        if (ret.done) {
+                            cb && cb(null, args);
+                        } else {
+                            ret.value(next);
+                        }
+                    }
+                }
+            }();
+        }
+    }
+
+    co(function* () {
+        var a;
+        a = yield delay(200); // 200
+        a = yield delay(a + 100); // 300
+        a = yield delay(a + 100); // 400
+    })(function(err, data) {
+        if (!err) {
+            console.log(data); // print 400
+        }
+    })
+
+}());
+
+(function(){
+    // http://www.dofactory.com/javascript-iterator-pattern.aspx
+    
+    var Iterator = function(items) {
+        this.index = 0;
+        this.items = items;
+    };
+
+    Iterator.prototype = {
+        first: function() {
+            this.reset();
+            return this.next();
+        },
+        next: function() {
+            return this.items[this.index++];
+        },
+        hasNext: function() {
+            return this.index <= this.items.length;
+        },
+        reset: function() {
+            this.index = 0;
+        },
+        each: function(callback) {
+            for (var item = this.first(); this.hasNext(); item = this.next()) {
+                callback(item);
+            }
+        }
+    };
+
+    // log helper
+    var log = (function() {
+        var log = "";
+        return {
+            add: function(msg) { log += msg + "\n"; },
+            show: function() { console.log(log); log = ""; }
+        }
+    })();
+
+
+    new function run() {
+
+        var items = ["one", 2, "circle", true, "Applepie"];
+        var iter = new Iterator(items);
+
+        // using for loop
+
+        for (var item = iter.first(); iter.hasNext(); item = iter.next()) {
+            log.add(item);
+        }
+
+        log.add("");
+
+        // using Iterator's each method
+
+        iter.each(function(item) {
+            log.add(item);
+        });
+
+        log.show();
+    }();
+}());
+
+(function(){
+    /* Title: Iterator
+     Description: implements a specialized language
+     */
+    
+    var agg = (function () {
+
+        var index = 0,
+                data = [1, 2, 3, 4, 5],
+                length = data.length;
+
+        return {
+
+            next:function () {
+                var element;
+                if (!this.hasNext()) {
+                    return null;
+                }
+                element = data[index];
+                index = index + 2;
+                return element;
+            },
+
+            hasNext:function () {
+                return index < length;
+            },
+
+            rewind:function () {
+                index = 0;
+            },
+
+            current:function () {
+                return data[index];
+            }
+
+        };
+    }());
+
+    var element;
+    while (element - agg.next()) {
+        // do something with the element
+        console.log(element);
+    }
+
+    while (agg.hasNext()) {
+        // do something with the next element...
+        console.log(agg.next());
+    }
+
+    // this loop logs 1, then 3, then 5
+    while (agg.hasNext()) {
+        console.log(agg.next());
+    }
+
+    // go back
+    agg.rewind();
+    console.log(agg.current()); // 1
+
+    // reference
+    // http://www.addyosmani.com/resources/essentialjsdesignpatterns/book/#iteratorpatternjquery
+    // http://shop.oreilly.com/product/9780596806767.do?sortby=publicationDate
+}());
+
+(function(){
+    var CafeMenu = function(){
+        Menu.apply(this);
+        this.nPosition = -1;
+        this.aMenuItems = [];
+        this.createIterator = function(){
+            return new CafeMenuIterator(this.aMenuItems);
+        };
+        this.addItem("Express", "Coffee from machine", false, 0.99);
+        this.addItem("Long with water", "Coffee with a lot of water", false, 1.20);
+        this.addItem("On the rocks", "Coffee with ice", false, 2.00);
+    };
+    CafeMenu.prototype.addItem = function(sName, sDescription, bVegetarian, nPrice){
+        var oMenuItem = new MenuItem(sName, sDescription, bVegetarian, nPrice);
+        this.aMenuItems.push(oMenuItem);
+    };
+    CafeMenu.prototype.getMenuItems = function(){
+        return this.aMenuItems;
+    };
+
+    var CafeMenuIterator = function(aMenuItems){
+        this.aMenuItems = aMenuItems;
+        Iterator.apply(this);
+        this.nPosition = -1;
+        this.nLength = this.aMenuItems.length;
+        this.hasNext = function(){
+            return (this.nPosition + 1) < this.nLength;
+        };
+        this.next = function(){
+            this.nPosition = this.nPosition + 1;
+            return this.aMenuItems[this.nPosition];
+        };
+    };
+
+    var DinnerMenu = function(){
+        Menu.apply(this);
+        this.oMenuItems = {};
+        this.createIterator = function(){
+            return new DinnerMenuIterator(this.oMenuItems);
+        };
+        this.addItem("Vegetarian BLT", "(Fakin') Bacon with lettuce and tomato on whole wheat", true, 2.99);
+        this.addItem("BLT", "Bacon with lettuce and tomato on whole wheat", false, 2.99);
+        this.addItem("Soup of the day", "Soup of the day, with a side of potato salad", false, 3.29);
+        this.addItem("Hotdog", "A hotdog with saurkraut, relish, onions, topped with cheese", false, 3.05);
+    };
+    DinnerMenu.MAX_ITEMS = 6;
+    DinnerMenu.prototype.addItem = function(sName, sDescription, bVegetarian, nPrice){
+        if(this.length === DinnerMenu.MAX_ITEMS){
+            throw new Error("Sorry menu is full! Can't add item to menu");
+        }
+        this.oMenuItems[sName] = new MenuItem(sName, sDescription, bVegetarian, nPrice);
+        this.length = this.length + 1;
+    };
+    DinnerMenu.prototype.getMenuItems = function(){
+        return this.oMenuItems;
+    };
+
+    var DinnerMenuIterator = function(oMenuItems){
+        this.oMenuItems = oMenuItems;
+        Iterator.apply(this);
+        this.nPosition = -1;
+        this.nLength = 0;
+        this.hasNext = function(){
+            return (this.nPosition + 1) < this.nLength;
+        };
+        this.next = function(){
+            this.nPosition = this.nPosition + 1;
+            return this.oMenuItems[this.aKeys[this.nPosition]];
+        };
+        this._getKeys = function(){
+            var aKeys = [];
+            var sKey = '';
+            for(sKey in this.oMenuItems){
+                if(this.oMenuItems.hasOwnProperty(sKey)){
+                    aKeys.push(sKey);
+                    this.nLength = this.nLength + 1;
+                }
+            }
+            return aKeys;
+        };
+        this.aKeys = this._getKeys();
+    };
+
+    var Iterator = function(){
+        this.hasNext = function(){
+            throw new Error("This method must be overwritten!");
+        };
+        this.next = function(){
+            throw new Error("This method must be overwritten!");
+        };
+        this.remove = function(){
+            throw new Error("This method must be overwritten!");
+        };
+    };
+
+    var Mattress = function(aMenus){
+        this.aMenus = aMenus;
+    };
+    Mattress.prototype._printMenu = function(oIterator){
+        var oMenuItem = null;
+        while(oIterator.hasNext()){
+            oMenuItem = oIterator.next();
+            console.log(oMenuItem.getName() + ": " + oMenuItem.getDescription() + ", " + oMenuItem.getPrice() + "eur.");
+        }
+    };
+    Mattress.prototype.printMenu = function(){
+        var nMenu = 0;
+        var nLenMenus = this.aMenus.length;
+        var oMenu = null;
+        var oIterator = null;
+
+        for(; nMenu < nLenMenus;)
+        {
+            oMenu = this.aMenus[nMenu];
+            oIterator = oMenu.createIterator();
+            this._printMenu(oIterator);
+            nMenu = nMenu + 1;
+        }
+    };
+
+    var Menu = function(){
+        this.createIterator = function(){
+            throw new Error("This method must be overwritten!");
+        };
+    };
+
+    var MenuItem = function(sName, sDescription, bVegetarian, nPrice){
+        this.sName = sName;
+        this.sDescription = sDescription;
+        this.bVegetarian = bVegetarian;
+        this.nPrice = nPrice;
+    };
+    MenuItem.prototype.getName = function(){
+        return this.sName;
+    };
+    MenuItem.prototype.getDescription = function(){
+        return this.sDescription;
+    };
+    MenuItem.prototype.getPrice = function(){
+        return this.nPrice;
+    };
+    MenuItem.prototype.isVegetarian = function(){
+        return this.bVegetarian;
+    };
+
+    var PancakeHouseMenu = function(){
+        Menu.apply(this);
+        this.nPosition = -1;
+        this.aMenuItems = [];
+        this.createIterator = function(){
+            return new PancakeHouseMenuIterator(this.aMenuItems);
+        };
+        this.addItem("K&B's Pancake Breakfast", "Pancakes with scrambled eggs, and toast", true, 2.99);
+        this.addItem("Regular Pancake Breakfast", "Pancakes with fried eggs, sausage", false, 2.99);
+        this.addItem("Blueberry Pancakes", "Pancakes made with fresh blueberries", true, 3.49);
+        this.addItem("Waffles", "Waffles, with your choice of blueberries or strawberries", true, 3.59);
+    };
+    PancakeHouseMenu.prototype.addItem = function(sName, sDescription, bVegetarian, nPrice){
+        var oMenuItem = new MenuItem(sName, sDescription, bVegetarian, nPrice);
+        this.aMenuItems.push(oMenuItem);
+    };
+    PancakeHouseMenu.prototype.getMenuItems = function(){
+        return this.aMenuItems;
+    };
+
+    var PancakeHouseMenuIterator = function(aMenuItems){
+        this.aMenuItems = aMenuItems;
+        Iterator.apply(this);
+        this.nPosition = -1;
+        this.nLength = this.aMenuItems.length;
+        this.hasNext = function(){
+            return (this.nPosition + 1) < this.nLength;
+        };
+        this.next = function(){
+            this.nPosition = this.nPosition + 1;
+            return this.aMenuItems[this.nPosition];
+        };
+    };
+
+    var oMattress = new Mattress([new PancakeHouseMenu(), new DinnerMenu(), new CafeMenu()]);
+    console.log("---------------------------------------------");
+    oMattress.printMenu();
+    console.log("---------------------------------------------");
+
+}());
+
+</script>
+</body>
+</html>

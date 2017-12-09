@@ -1,0 +1,315 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+<body>
+
+<script>
+    /**
+     * 门面模式
+     *
+     * 定义：
+     * 为子系统中的一组接口提供一个一致的界面，Facade模式定义了一个高层接口，这个接口使得这一子系统更加容易使用。
+     *
+     * 本质：
+     * 封装交互，简化调用
+     *
+     * 门面模式有两个作用：一是简化类的接口；二是消除类与使用它的客户代码之间的耦合。在js中，门面模式常常是开发人员最亲密的朋友。它是几乎所有js库的核心原则。通过创建一些便利方法让复杂系统变得更加简单易用，门面模式可以使库提供的工具更容易理解。使用这种模式，程序员可以间接地与一个子系统打交道，与直接访问子系统相比，这样做更不容易出错。
+     * 门面模式简化了诸如错误记录或跟踪页面视图统计数据这类常用的或重复性的任务。通过添加一些便利方法（这种方法是对原有的一些方法的组合利用），它还可以让对象的功能显得更加完善。
+     * 门面模式可用于简化复杂接口。它可以在幕后为你进行错误检查，清除不再需要的大对象，以及用一种更加易用的方式展现对象的功能。
+     * 门面模式并非必不可少，同样的任务不用它也能完成。这是一种组织性的模式，它可以用来修改类和对象的接口，使其更便于使用。它可以让程序员过的更轻松，使代码变得更容易管理。
+     * 这个模式在DOM脚本编程这种需要面对各种不一致的浏览器接口的环境中很常用。
+     *
+     * 外观模式的目的：
+     * 外观模式的目的不是给子系统添加新的功能接口，而是为了让外部减少与子系统内多个模块的交互，松散耦合，从而让外部能够更简单地使用子系统。
+     * 这点要特别注意，因为外观是当作子系统对外的接口出现的，虽然也可以在这里定义依稀子系统没有的功能，但不建议这么做，外观应该是包装已有的功能，它主要负责组合已有功能来实现客户需要，而不是添加新的实现。
+     *
+     * 表面上看就是把客户端的代码搬到Facade里面了。
+     *
+     * 对设计原则的体现
+     * 很好的体现了“最少知识原则”
+     *
+     */
+    
+    /*
+    界面：
+    主要指的是从一个组件外部来看这个组件，，能够看到什么，就、这就是这个组件的界面，也就是所说的外观，
+    比如，你从一个类外部来看这个类，那么这个类的public方法就是这个类的外观。
+    再比如，你从一个模块外观来看这个模块，那么这个模块对外的接口就是这个模块的外观，因为你只能看到这些接口，其他的模块内部实现的部分是被接口封装隔离的。
+
+    接口：
+    主要指的是外部和内部交互的一个通道，通常是指一些方法，可以是类的方法，也可以是interface方法。
+     */
+
+    /*
+     基于GUI的操作系统就是计算机上的数据和功能的一个门面。每次点击，拖动和移动某个东西时，实际上是在跟一个门面打交道，间接地执行了一些幕后命令。
+     */
+
+    // 跨浏览器事件侦听器
+    function addEvent(el, type, fn) {
+        if (window.addEventListener) {
+            el.addEventListener(type, fn, false);
+        } else if (window.attachEvent) {
+            el.attachEvent('on' + type, fn);
+        } else {
+            el['on' + type] = fn;
+        }
+    }
+    /*
+     addEvent函数是一个基本的门面，有了它，就有了一种为DOM节点添加事件侦听器的简便方法。
+     */
+
+    // 用作便利方法的门面元素
+    /* 门面模式给予开发人员的另一个好处表现在对函数的组合上。这些组合而得的函数又叫便利函数(convenience function).
+     */
+    function a(x) {
+        // do stuff here...
+    }
+    function b(y) {
+        // do stuff here...
+    }
+    function ab(x,y) {
+        a(x);
+        b(y);
+    }
+
+    // DOM中的例子
+    var DED=window.DED || {};
+    DED.util={
+        stopPropagation:function(e){
+            if(e.stopPropagation) {
+                // w3 interface
+                e.stopPropagation();
+            } else {
+                // IE's interface
+                e.cancelBubble=true;
+            }
+        },
+        preventDefault:function(e){
+            if(e.preventDefault) {
+                e.preventDefault();
+            } else {
+                e.returnValue=false;
+            }
+        },
+        // our convenience method
+        stopEvent:function(e){
+            DED.util.stopPropagation(e);
+            DED.util.preventDefault(e);
+        }
+    };
+
+
+    // 示例： 设置HTML元素的样式
+    function setStyle(elements,prop,val) {
+        for(var i= 0,len=elements.length;i<len;i++) {
+            document.getELementById(elements[i]).style[prop]=val;
+        }
+    }
+    setStyle(['foo'], 'position', 'absolute');
+
+    function setCSS(el,styles){
+        for(var prop in styls) {
+            if(!styls.hasOwnProperty(prop)) {
+                continue;
+            }
+            setStyle(el,prop,styls[prop]);
+        }
+    }
+    setCSS(['foo', 'bar'], {
+        position:'absolute',
+        top:'50px',
+        left:'300px'
+    });
+
+
+    // 示例： 设计一个事件工具
+    DED.util.Event={
+        getEvent:function(e){
+            return e || window.event;
+        },
+        getTarget:function(e){
+            e = this.getEvent(e);
+            return e.target || e.srcElement;
+        },
+        stopPropagation:function(e){
+            e = this.getEvent(e);
+            if(e.stopPropagation) {
+                e.stopPropagation();
+            } else {
+                e.cancelBubble=true;
+            }
+        },
+        preventDefault:function(e){
+            e = this.getEvent(e);
+            if(e.preventDefault) {
+                e.preventDefault();
+            } else {
+                e.returnValue=false;
+            }
+        },
+        stopEvent:function(e){
+            this.stopPropagation(e);
+            this.preventDefault(e);
+        }
+    };
+
+    addEvent($('example'), 'click', function(e){
+        console.log(DED.util.Event.getTarget(e));
+        DED.util.Event.stopEvent(e);
+    });
+
+    /*
+     实现门面模式的一般步骤
+     找准自己的应用程序中感觉适合使用门面方法的地方后，就可以着手加入便利方法了。这些函数的名称应该仔细考虑，与它们的用途要相称。对于有几种函数组合而成的函数，一个简单的办法就是把相关函数的名称串连成一个函数名，并采用camel大写规范。
+     处理浏览器API的不一致性属于另一种情况，此时要做的就是把分支代码放在新创建的门面函数中，辅以对象检查或浏览器嗅探等技术。命名方式应该以易识别为主。
+
+     门面模式的适用场合
+     判断是否应该应用门面模式的关键在于辨认那些反复成组出现的代码。如果函数b出现在函数a之后这种情况经常出现，那么也许你应该考虑添加一个把这两个函数组合起来的门面函数。
+     在自己的核心工具代码中加入门面函数的另一个可能目的是应对js内置函数在不同浏览器中的不同表现。
+     */
+
+    /*
+     门面模式之利
+     使用门面模式的目的就是要让程序员过的更轻松一些。编写一次组合代码，然后就可以反复使用它，这有助于节省时间和精力，他们提供了一个处理常见问题和任务的简化接口。
+     门面方法方便了开发人员，并且提供了较高层的功能，他们还能降低对外部代码的依赖程度。为应用系统的开发增加了一些额外的灵活性。通过使用门面模式，可以避免与下层子系统紧密耦合。这样就可以对这个系统进行修改该而不会影响到客户代码。
+
+     门面模式之弊
+     有时候门面元素也会带来一些不必要的额外负担。门面模式时常常会被滥用，导致小题大做。在实施一些套路之前应该认真掂量一下其实用性，因为它们不易察觉的破坏性和昂贵代价可能会是应用程序步履蹒跚。
+     对于简单的个人网站或少量营销网页来说，仅为工具提示和弹出式窗口这样一点增强行为就导入整个js库可能并不明智。
+     */
+    
+    /***
+    外观模式的实现-----------------------------------
+    */
+
+    /*
+    1.Facade的实现
+    对于一个子系统而言，外观类不需要很多，通常可以实现成为一个单例。也可以直接把外观中的方法实现称为静态的方法，这样就可以不需要创建外观对象的实例而直接调用，这种实现相当于把外观类当成一个辅助工具类实现。
+     */
+    
+     var Facade = function(){};
+     Facade.prototype = {
+        test: function(){
+            var a = new AModuleImpl();
+            a.testA();
+            var b = new BModuleImpl();
+            b.testB();
+            var c = new CModuleImpl();
+            c.testC();
+        }
+     };
+
+     /*
+     2.Facade可以实现成为Interface
+     虽然Facade通常直接实现成为类，但是也可以把Facade实现成为真正的interface，只是这样会增加系统的复杂度，因为这样会需要一个Facaded的实现，还需要一个来获取Facade接口对象的工厂。
+
+     3.Facade实现成为interface的附带好处
+     如果把Facade实现成为接口，就能够有选择性地暴露接口的方法，尽量减少模块对子系统外提供的接口方法。
+
+     换句话说，一个模块的接口中定义的方法可以分成两部分，一部分是给子系统外部使用的，一部分是子系统内部的模块间相互调用时使用的。有了Facade接口，那么用于仔细用内部的接口功能就不用暴露给子系统的外部了。
+      */
+     
+     var AModuleApi = function(){};
+     AModuleApi.prototype = {
+        // 对子系统外部
+        a1: function(){},
+        // 其他方法是用在子系统内部，与B,C模块交互用
+        a2: function(){},
+        a3: function(){}
+     };
+
+     var FacadeApi = {
+        // 这些是A,B,C模块对仔细用外的接口，这样外部就不需要知道A,B,C模块的存在，
+        // 只需要知道Facade接口就行了。
+        a1: function(){},
+        b1: function(){},
+        c1: function(){},
+
+        // 这是对外提供的组合方法
+        test: function(){}
+     };
+
+     /*
+     4.Facade的方法实现
+     Facade的方法实现中，一般是负责把客户端的请求转发给子系统内部的各个模块进行处理，Facade本身并不进行功能的处理。Facade的方法实现只是实现一个功能的组合调用。
+      */
+     
+     /*
+     相关模式
+
+     外观模式和中介者模式
+
+     这两个模式非常类似，但是却有本质的区别。
+     中介者模式主要用来封装多个对象之间相互的交互，多用在系统内部的多个模块之间；而外观模式封装的是单向的交互，是从客户端访问系统的调用，没有从系统中来访问客户端的调用。
+     在中介者模式的实现里面，是需要实现具体的交互功能的；而外观模式的实现里面，一般是组合调用或是转调内部实现的功能，通常外观模式本身并不实现这些功能。
+     中介者模式的目的主要是松散多个模块之间的耦合，把这些耦合关系全部放到中介者中去实现；而外观模式的默读是简化客户端的调用，这点和中介者模式也不同。
+
+     外观模式和单例模式
+
+     通常一个子系统只需要一个外观实例，所以外观模式可以和单例模式组合使用，吧Facade类实现成为单例。当然，要把外观类的构造器私有化，然后把提供给客户端的方法实现成为静态的。
+
+     外观模式和抽象工厂模式
+     外观模式的外观类通常需要和系统内部的多个模块交互，每个模块一般都有自己的接口，所以在外观类的具体实现里面，需要获取这些接口，然后组合这些接口来完成客户端的功能。
+     那么怎么获取这些接口呢？就可以和抽象工厂一起使用，外观类通过抽象工厂来获取所需要的接口，而抽象工厂也可以把模块内部的实例对Facade进行屏蔽，也就是说Facade也仅仅只是知道它从模块中获取它需要的功能，模块内部的细节，Facade也不知道。
+      */
+     
+
+      // http://www.dofactory.com/javascript-facade-pattern.aspx
+
+    var Mortgage = function(name) {
+        this.name = name;
+    }
+
+    Mortgage.prototype = {
+        applyFor: function(amount) {
+
+            // access multiple subsystems...
+
+            var result = "approved";
+            if (!new Bank().verify(this.name, amount)) {
+                result = "denied";
+            } else if (!new Credit().get(this.name)) {
+                result = "denied";
+            } else if (!new Background().check(this.name)) {
+                result = "denied";
+            }
+
+            return this.name + " has been " + result +
+                   " for a " + amount + " mortgage";
+        }
+    }
+
+    var Bank = function() {
+        this.verify = function(name, amount) {
+            // complex logic ...
+            return true;
+        }
+    }
+    var Credit = function() {
+        this.get = function(name) {
+            // complex logic ...
+            return true;
+        }
+    }
+    var Background = function() {
+        this.check = function(name) {
+            // complex logic ...
+            return true;
+        }
+    }
+
+
+    function run() {
+
+        var mortgage = new Mortgage("Joan Templeton");
+        var result = mortgage.applyFor("$100,000");
+
+        alert(result);
+    }
+
+</script>
+</body>
+</html>
